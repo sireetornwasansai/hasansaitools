@@ -28,24 +28,45 @@ const STDS = (() => { const m = new Map(); (DATA.ha6 || []).forEach(x => m.set(x
 const stdIssues = id => S.issues.filter(i => new RegExp('(^|[^A-Za-z0-9.-])' + id.replace(/\./g, '\\.') + '(?![\\d.]|[ก-ฮ])').test(i.std || ''));
 const stdScore = id => +S.plus['std:' + id] || 0;
 const GRP = { I: 'ตอนที่ I ภาพรวมองค์กร', II: 'ตอนที่ II ระบบสำคัญของโรงพยาบาล', III: 'ตอนที่ III กระบวนการดูแลผู้ป่วย', IV: 'ตอนที่ IV ผลการดำเนินการ' };
+/* ---------- มาตรฐาน HA ฉบับที่ 6: ประเมินตนเองตามแนวคิด 3C-DALI (เก็บใน plus คีย์ std:ID ไม่ต้องแก้ GAS) ---------- */
+const DALI = { 1: ['เริ่มต้น', 'ยังไม่มีระบบที่ชัดเจน'], 2: ['D', 'ออกแบบระบบ/มีแนวทางแล้ว'], 3: ['A', 'นำไปปฏิบัติครอบคลุม มีหลักฐาน'], 4: ['L-I', 'ติดตามผล เรียนรู้ ปรับปรุงต่อเนื่อง'], 5: ['แบบอย่าง', 'เป็นแบบอย่างที่ดี/นวัตกรรม ผลลัพธ์ดีเด่น'] };
+const stdNew = s => /ใหม่ใน HA6/.test(s.t || '');
+const stdName = s => String(s.t || '').replace(/\s*\(ใหม่ใน HA6\)\s*$/, '');
+const stdHiRisk = s => stdIssues(s.id).some(i => isOpen(i) && i.risk === 'สูง');
+const STD_FILTERS = [['', 'ทั้งหมด'], ['todo', 'ยังไม่ประเมิน'], ['low', 'คะแนน 1-2'], ['new', 'ใหม่ใน HA6'], ['risk', 'เสี่ยงสูงค้าง']];
+const STD_PRED = { '': () => true, todo: s => !stdScore(s.id), low: s => stdScore(s.id) > 0 && stdScore(s.id) <= 2, new: stdNew, risk: stdHiRisk };
+let stdFilter = '';
+const GAP_HEAD = '   ติดตามมาตรฐาน HA6 ที่ยังเป็น Gap:';
+function stdGapText(){
+  const rows = STDS.filter(s => (stdScore(s.id) > 0 && stdScore(s.id) <= 2) || stdHiRisk(s)).sort((a, b) => (stdScore(a.id) || 9) - (stdScore(b.id) || 9)).slice(0, 12);
+  return rows.length ? GAP_HEAD + '\n' + rows.map(s => '   - ' + s.id + ' ' + stdName(s) + (stdScore(s.id) ? ' (คะแนน ' + stdScore(s.id) + ')' : '') + (stdHiRisk(s) ? ' [เสี่ยงสูงค้าง]' : '')).join('\n') : '';
+}
 function renderStd(){
   const root = $('#v-std'); root.textContent = '';
   const sc = STDS.filter(s => stdScore(s.id) > 0), avg = sc.length ? (sc.reduce((n, s) => n + stdScore(s.id), 0) / sc.length).toFixed(1) : '-';
-  const risk = STDS.filter(s => stdIssues(s.id).some(i => isOpen(i) && i.risk === 'สูง')).length;
-  const low = STDS.filter(s => stdScore(s.id) > 0 && stdScore(s.id) <= 2).length;
+  const risk = STDS.filter(stdHiRisk).length, low = STDS.filter(STD_PRED.low).length, nw = STDS.filter(stdNew), nwDone = nw.filter(s => stdScore(s.id) > 0).length;
   root.append(h('div', { class: 'stat' }, h('div', null, h('b', null, sc.length + '/' + STDS.length), h('span', null, 'ประเมินแล้ว')), h('div', null, h('b', null, avg), h('span', null, 'คะแนนเฉลี่ย')), h('div', { class: 'a' }, h('b', null, low), h('span', null, 'คะแนน 1-2')), h('div', { class: 'a' }, h('b', null, risk), h('span', null, 'มี Gap เสี่ยงสูง'))));
-  root.append(h('p', { class: 'small muted', style: 'margin:0 0 10px' }, 'ประเมินตนเองรายมาตรฐานด้วยคะแนน 1-5 (กดปุ่มคะแนนเพื่อเปลี่ยน) ระบบนับประเด็นที่อ้างมาตรฐานนั้นในช่องหัวข้อมาตรฐานให้อัตโนมัติ'), );
+  root.append(h('p', { class: 'small muted', style: 'margin:0 0 6px' }, 'มาตรฐานโรงพยาบาลและบริการสุขภาพ ฉบับที่ 6 · กดปุ่มคะแนนเพื่อเปลี่ยน (1-5) ระบบนับประเด็นที่อ้างมาตรฐานนั้นให้อัตโนมัติ · ข้อใหม่ใน HA6 ประเมินแล้ว ' + nwDone + '/' + nw.length));
+  root.append(h('details', { class: 'card noprint', style: 'padding:8px 12px' }, h('summary', { style: 'cursor:pointer;font-weight:600' }, 'เกณฑ์ให้คะแนน 1-5 (แนวคิด 3C-DALI)'),
+    h('div', { class: 'small', style: 'margin-top:6px' }, [1, 2, 3, 4, 5].map(n => h('div', { style: 'margin:3px 0' }, h('b', null, n + ' · ' + DALI[n][0] + '  '), DALI[n][1]))),
+    h('div', { class: 'small muted', style: 'margin-top:6px' }, 'ตัวช่วยตีความภายในแอป ให้ยึดแบบฟอร์มรายงานประเมินตนเอง (SAR) ฉบับล่าสุดของ สรพ. เป็นหลัก')));
+  root.append(h('div', { class: 'chips noprint' }, STD_FILTERS.map(([k, t]) => h('button', { class: 'fchip', 'aria-pressed': String(stdFilter === k), on: { click: () => { stdFilter = k; renderStd(); } } }, t))));
+  let shown = 0;
   ['I', 'II', 'III', 'IV'].forEach(g => {
-    const rows = STDS.filter(s => s.id.split('-')[0] === g); if (!rows.length) return;
-    const card = h('div', { class: 'card' }, h('h3', null, GRP[g]));
+    const all = STDS.filter(s => s.id.split('-')[0] === g); if (!all.length) return;
+    const rows = all.filter(STD_PRED[stdFilter] || STD_PRED['']); if (!rows.length) return; shown += rows.length;
+    const gs = all.filter(s => stdScore(s.id) > 0), ga = gs.length ? (gs.reduce((n, s) => n + stdScore(s.id), 0) / gs.length).toFixed(1) : '-';
+    const card = h('div', { class: 'card' }, h('h3', null, GRP[g]), h('div', { class: 'small muted', style: 'margin:-4px 0 6px' }, 'ประเมินแล้ว ' + gs.length + '/' + all.length + '  |  เฉลี่ย ' + ga));
     rows.forEach(s => {
-      const v = stdScore(s.id), iss = stdIssues(s.id), op = iss.filter(isOpen).length, hi = iss.filter(i => isOpen(i) && i.risk === 'สูง').length;
-      card.append(h('div', { class: 'itm std' }, h('div', { class: 'id' }, s.id), h('div', null, h('div', null, s.t), h('div', { class: 'small muted' }, (s.rounds.length ? 'ตรวจรอบ ' + s.rounds.join(', ') : 'ยังไม่ผูกรอบ') + (iss.length ? '  |  ประเด็น ' + iss.length + ' ค้าง ' + op : '')), hi ? h('span', { class: 'pill hi' }, 'เสี่ยงสูงค้าง ' + hi) : null),
-        h('button', { class: 'st', 'data-s': v >= 4 ? '2' : v >= 1 ? '1' : '0', disabled: ro(), 'aria-label': 'มาตรฐาน ' + s.id + ' คะแนน ' + (v || 'ยังไม่ประเมิน') + ' กดเพื่อเปลี่ยน', on: { click: () => setHait('plus', 'std:' + s.id, (v + 1) % 6) } }, v ? 'คะแนน ' + v : 'ยังไม่ประเมิน')));
+      const v = stdScore(s.id), iss = stdIssues(s.id), op = iss.filter(isOpen).length, hi = iss.filter(i => isOpen(i) && i.risk === 'สูง').length, gap = (v > 0 && v <= 2) || hi > 0;
+      card.append(h('div', { class: 'itm std' }, h('div', { class: 'id' }, s.id), h('div', null, h('div', null, stdName(s), stdNew(s) ? h('span', { class: 'pill mid', style: 'margin-left:6px' }, 'ใหม่ใน HA6') : null), h('div', { class: 'small muted' }, (s.rounds.length ? 'ตรวจรอบ ' + s.rounds.join(', ') : 'ยังไม่ผูกรอบ') + (iss.length ? '  |  ประเด็น ' + iss.length + ' ค้าง ' + op : '')), hi ? h('span', { class: 'pill hi' }, 'เสี่ยงสูงค้าง ' + hi) : null,
+          gap && !ro() ? h('div', { class: 'noprint', style: 'margin-top:4px' }, h('button', { class: 'btn ghost sm', type: 'button', on: { click: () => openIssue({ std: s.id, text: 'ปิด Gap มาตรฐาน ' + s.id + ' ' + stdName(s) + (v ? ' (ประเมินตนเอง ' + v + ' คะแนน)' : ''), type: 'ต้องติดตามเพิ่ม', risk: hi ? 'สูง' : 'กลาง' }) } }, '+ สร้างประเด็นปิด Gap')) : null),
+        h('button', { class: 'st', 'data-s': v >= 4 ? '2' : v >= 1 ? '1' : '0', disabled: ro(), 'aria-label': 'มาตรฐาน ' + s.id + ' คะแนน ' + (v ? v + ' ' + DALI[v][1] : 'ยังไม่ประเมิน') + ' กดเพื่อเปลี่ยน', on: { click: () => setHait('plus', 'std:' + s.id, (v + 1) % 6) } }, v ? 'คะแนน ' + v + ' · ' + DALI[v][0] : 'ยังไม่ประเมิน')));
     });
     root.append(card);
   });
-  root.append(h('div', { class: 'row noprint' }, h('button', { class: 'btn', on: { click: () => window.print() } }, 'พิมพ์ / บันทึก PDF'), h('button', { class: 'btn ghost', on: { click: () => saveFile('ประเมินตนเอง-มาตรฐาน-HA.csv', '\uFEFF' + [['มาตรฐาน', 'ชื่อ', 'รอบที่ตรวจ', 'คะแนน', 'ประเด็นทั้งหมด', 'ประเด็นค้าง']].concat(STDS.map(s => { const i = stdIssues(s.id); return [s.id, s.t, s.rounds.join(' '), stdScore(s.id) || '', i.length, i.filter(isOpen).length]; })).map(r => r.map(csvEsc).join(',')).join('\r\n'), 'text/csv') } }, 'ส่งออกคะแนน (CSV)')));
+  if (!shown) root.append(h('div', { class: 'empty-note' }, 'ไม่มีมาตรฐานตามตัวกรองนี้'));
+  root.append(h('div', { class: 'row noprint' }, h('button', { class: 'btn', on: { click: () => window.print() } }, 'พิมพ์ / บันทึก PDF'), h('button', { class: 'btn ghost', on: { click: () => saveFile('ประเมินตนเอง-มาตรฐาน-HA6.csv', '\uFEFF' + [['มาตรฐาน', 'ชื่อ', 'ใหม่ใน HA6', 'รอบที่ตรวจ', 'คะแนน', 'ระดับ DALI', 'ประเด็นทั้งหมด', 'ประเด็นค้าง', 'เสี่ยงสูงค้าง']].concat(STDS.map(s => { const i = stdIssues(s.id), v = stdScore(s.id); return [s.id, stdName(s), stdNew(s) ? 'ใช่' : '', s.rounds.join(' '), v || '', v ? DALI[v][0] : '', i.length, i.filter(isOpen).length, i.filter(x => isOpen(x) && x.risk === 'สูง').length]; })).map(r => r.map(csvEsc).join(',')).join('\r\n'), 'text/csv') } }, 'ส่งออกคะแนน (CSV)')));
 }
 /* ---------- ประชุม QMR: บันทึกรายงานการประชุม + ติดตามมติ (เก็บใน plus คีย์ mtg:ID ไม่ต้องแก้ GAS) ---------- */
 const QMR_UNIT = 'คณะกรรมการ QMR';
@@ -60,7 +81,7 @@ function mtgText(m){
   return L.filter(x => x !== null && x !== undefined).join('\n');
 }
 function openMtg(m){
-  const v = Object.assign({ date: todayISO(), time: '', end: '', place: '', chair: '', attendees: '', absent: '', agenda: AGENDA0, notes: '', next: '', recorder: '', checker: '', st: 'ร่าง', res: [] }, m || {});
+  const v = Object.assign({ date: todayISO(), time: '', end: '', place: '', chair: '', attendees: '', absent: '', agenda: AGENDA0, notes: '', next: '', recorder: '', checker: '', st: 'ร่าง', res: [], links: '' }, m || {});
   const rows = (v.res || []).map(r => Object.assign({}, r));
   openSheet((sheet, close) => {
     const f = {}, fld = (l, el) => h('div', null, h('label', null, l), el), err = h('div');
@@ -68,7 +89,7 @@ function openMtg(m){
     f.end = h('input', { type: 'text', value: v.end || '', placeholder: 'เช่น 15.30' }); f.recorder = h('input', { type: 'text', value: v.recorder || '', placeholder: 'ชื่อ-สกุล' }); f.checker = h('input', { type: 'text', value: v.checker || '', placeholder: 'ชื่อ-สกุล' });
     f.place = h('input', { type: 'text', value: v.place }); f.chair = h('input', { type: 'text', value: v.chair });
     f.attendees = h('textarea', { placeholder: 'ชื่อ-ตำแหน่ง คั่นด้วยเครื่องหมายจุลภาคหรือขึ้นบรรทัดใหม่' }, v.attendees); f.absent = h('input', { type: 'text', value: v.absent });
-    f.agenda = h('textarea', { style: 'min-height:120px' }, v.agenda); f.notes = h('textarea', { placeholder: 'สรุปประเด็นที่อภิปราย' }, v.notes);
+    f.agenda = h('textarea', { style: 'min-height:120px' }, v.agenda); f.links = h('textarea', { style: 'min-height:64px', placeholder: 'วางลิงก์เอกสาร (Google Drive / Docs ฯลฯ) บรรทัดละลิงก์ จะแสดงเป็นพรีวิวในการ์ดประชุม' }, v.links || ''); f.notes = h('textarea', { placeholder: 'สรุปประเด็นที่อภิปราย' }, v.notes);
     f.next = h('input', { type: 'date', value: v.next }); f.st = h('select', null, ['ร่าง', 'รับรองแล้ว'].map(t => h('option', { selected: v.st === t }, t)));
     const box = h('div');
     const draw = () => { box.textContent = ''; rows.forEach((r, k) => { const i = issOf(r);
@@ -82,7 +103,7 @@ function openMtg(m){
     sheet.append(h('div', { class: 'hd' }, h('h2', null, m ? 'แก้ไขรายงานการประชุม ครั้งที่ ' + m.no : 'บันทึกการประชุม QMR'), closeBtn(close)),
       h('datalist', { id: 'stdlist' }, STDS.map(s => h('option', { value: s.id }, s.t))), err,
       h('div', { class: 'two' }, fld('วันที่ประชุม', f.date), fld('เวลาเริ่มประชุม', f.time)), h('div', { class: 'two' }, fld('เวลาเลิกประชุม', f.end), fld('สถานที่', f.place)), fld('ประธาน', f.chair),
-      fld('ผู้เข้าร่วมประชุม', f.attendees), fld('ผู้ไม่เข้าร่วม (ลา)', f.absent), fld('ระเบียบวาระ (แก้ไขได้)', f.agenda), fld('สรุปการประชุม', f.notes),
+      fld('ผู้เข้าร่วมประชุม', f.attendees), fld('ผู้ไม่เข้าร่วม (ลา)', f.absent), fld('ระเบียบวาระ (แก้ไขได้)', f.agenda), h('button', { class: 'btn ghost sm', type: 'button', style: 'margin-top:6px', on: { click: () => { const t = stdGapText(); if (!t){ toast('ยังไม่มีมาตรฐานที่คะแนน 1-2 หรือมี Gap เสี่ยงสูง'); return; } if (f.agenda.value.indexOf(GAP_HEAD) >= 0){ toast('ใส่ในวาระแล้ว'); return; } f.agenda.value = f.agenda.value.replace(/\s+$/, '') + '\n' + t; } } }, '+ ดึงมาตรฐาน HA6 ที่ยังเป็น Gap เข้าวาระ'), fld('สรุปการประชุม', f.notes), fld('ลิงก์เอกสารประกอบ (แสดงเป็นพรีวิว)', f.links),
       h('h3', { style: 'margin:14px 0 4px' }, 'มติ / งานติดตาม'), h('div', { class: 'small muted' }, 'เมื่อบันทึก มติที่ยังไม่มีงานจะสร้างเป็นประเด็นในแท็บ "ประเด็น" ให้อัตโนมัติ (หน่วยงาน ' + QMR_UNIT + ') เพื่อติดตามและแจ้งเตือนเกินกำหนด'),
       box, h('button', { class: 'btn ghost sm', type: 'button', on: { click: () => { rows.push({ t: '', owner: '', due: '', std: '' }); draw(); } } }, '+ เพิ่มมติ/งาน'),
       h('div', { class: 'two', style: 'margin-top:10px' }, fld('นัดประชุมครั้งต่อไป', f.next), fld('สถานะรายงาน', f.st)), h('div', { class: 'two' }, fld('ผู้จดรายงาน', f.recorder), fld('ผู้ตรวจรายงาน', f.checker)),
@@ -94,15 +115,132 @@ function openMtg(m){
             if (await putIssue({ id: iid, no: nextNo(), by: shared.uid, createdAt: nowISO(), found: f.date.value, round: '', unit: QMR_UNIT, std: x.std, text: t, type: 'ต้องติดตามเพิ่ม', work: 'HA', risk: 'กลาง', owner: x.owner, due: x.due, status: 'เปิด', recheck: '', evidence: '', note, closedOn: '' })) x.issueId = iid; }
           else if (issOf(x) && (issOf(x).owner !== x.owner || issOf(x).due !== x.due || issOf(x).text !== t)) await patchIssue(x.issueId, { owner: x.owner, due: x.due, text: t, std: x.std });
           res.push(x); }
-        const rec = { id, no, date: f.date.value, time: f.time.value.trim(), end: f.end.value.trim(), recorder: f.recorder.value.trim(), checker: f.checker.value.trim(), place: f.place.value.trim(), chair: f.chair.value.trim(), attendees: f.attendees.value.trim(), absent: f.absent.value.trim(), agenda: f.agenda.value.trim(), notes: f.notes.value.trim(), next: f.next.value, st: f.st.value, res };
+        const rec = { id, no, date: f.date.value, time: f.time.value.trim(), end: f.end.value.trim(), recorder: f.recorder.value.trim(), checker: f.checker.value.trim(), place: f.place.value.trim(), chair: f.chair.value.trim(), attendees: f.attendees.value.trim(), absent: f.absent.value.trim(), agenda: f.agenda.value.trim(), notes: f.notes.value.trim(), next: f.next.value, st: f.st.value, links: f.links.value.trim(), res };
         if (await setHait('plus', 'mtg:' + id, rec)) { toast('บันทึกรายงานการประชุมครั้งที่ ' + no + ' แล้ว'); close(); render(); } } } }, 'บันทึกรายงาน'),
         h('button', { class: 'btn ghost', on: { click: close } }, 'ยกเลิก'),
         m ? h('button', { class: 'btn ghost', on: { click: () => { location.href = 'editor.html?m=' + encodeURIComponent(m.id); } } }, 'เปิดหน้าพิมพ์ (แบบ Word)') : null,
         m ? h('button', { class: 'btn ghost', on: { click: async () => { if (!confirm('ลบรายงานการประชุมนี้? (งานติดตามในแท็บประเด็นยังอยู่)')) return; if (await setHait('plus', 'mtg:' + m.id, null)) { if (S.plus['mdoc:' + m.id]) await setHait('plus', 'mdoc:' + m.id, null); toast('ลบรายงานแล้ว'); close(); render(); } } } }, 'ลบรายงาน') : null));
   });
 }
+/* ---------- แท็บประชุม: แก้ไข/ลบ + ไฟล์แนบ + พรีวิวไฟล์และลิงก์ (ไม่ต้องแก้ GAS: ไฟล์ผูกกับประชุมด้วยช่อง issue = 'mtg:ID') ---------- */
+let mtgDocsLoaded = false; const MTG_PFX = 'mtg:'; const mtgBusy = { on: false };
+const didOf = u => (((/\/d\/([\w-]{10,})/.exec(u || '')) || (/[?&]id=([\w-]{10,})/.exec(u || '')) || [])[1]) || '';
+const isImgItem = it => /^image\//.test(it.mime || '') || /\.(jpe?g|png|gif|webp|bmp|heic)$/i.test(it.name || '');
+const isPdfItem = it => /pdf/i.test(it.mime || '') || /\.pdf$/i.test(it.name || '');
+const extOf = n => ((/\.([A-Za-z0-9]{1,5})$/.exec(n || '') || [])[1] || 'FILE').toUpperCase();
+const blobUrls = new Map();
+const blobUrl = d => { if (!blobUrls.has(d.id)) blobUrls.set(d.id, URL.createObjectURL(d.blob)); return blobUrls.get(d.id); };
+const copyText = async (t, msg) => { try { await navigator.clipboard.writeText(t); toast(msg || 'คัดลอกแล้ว'); } catch (e) { window.prompt('คัดลอกข้อความนี้', t); } };
+
+/* ไฟล์ที่แนบกับการประชุมนี้ (โหมดทีม = ไฟล์ใน Drive, โหมดเครื่องนี้ = IndexedDB) */
+function mtgFiles(m){
+  if (isTeam()) return (S.files || []).filter(f => f.issue === MTG_PFX + m.id).sort((a, b) => String(a.at).localeCompare(String(b.at))).map(f => {
+    const did = didOf(f.url);
+    return { team: true, f, id: f.id, name: f.name, size: f.size, mime: f.mime, url: f.url, did, thumb: did ? 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(did) + '&sz=w480' : '' };
+  });
+  return (DOCS || []).filter(d => d.mtg === m.id).sort((a, b) => String(a.at).localeCompare(String(b.at))).map(d => ({ team: false, d, id: d.id, name: d.name, size: d.size, mime: d.type, thumb: /^image\//.test(d.type || '') ? blobUrl(d) : '' }));
+}
+/* ลิงก์ในช่อง "ลิงก์เอกสาร" + ลิงก์ที่พิมพ์ไว้ในสรุป/วาระ */
+function mtgLinks(m){
+  const seen = new Set(), out = [];
+  [m.links, m.notes, m.agenda].forEach(txt => (String(txt || '').match(/https?:\/\/[^\s<>"')]+/g) || []).forEach(raw => {
+    const u = raw.replace(/[.,;:!?]+$/, ''); if (seen.has(u) || out.length >= 12) return; seen.add(u);
+    let x; try { x = new URL(u); } catch (e) { return; }
+    const host = x.hostname.replace(/^www\./, ''); let g;
+    const l = { url: u, host, view: '', img: '', tag: 'LINK' };
+    if (x.protocol === 'https:'){
+      if (host === 'drive.google.com' && (g = /\/file\/d\/([\w-]{10,})/.exec(x.pathname))){ l.view = 'https://drive.google.com/file/d/' + g[1] + '/preview'; l.tag = 'DRIVE'; }
+      else if (host === 'drive.google.com' && /\/folders\//.test(x.pathname)) l.tag = 'โฟลเดอร์';
+      else if (host === 'docs.google.com' && (g = /^\/(document|spreadsheets|presentation)\/d\/([\w-]{10,})/.exec(x.pathname))){ l.view = 'https://docs.google.com/' + g[1] + '/d/' + g[2] + '/preview'; l.tag = g[1] === 'document' ? 'DOC' : g[1] === 'spreadsheets' ? 'SHEET' : 'SLIDE'; }
+      else if (/\.(jpe?g|png|gif|webp)$/i.test(x.pathname)){ l.img = u; l.tag = 'รูป'; }
+    }
+    out.push(l);
+  }));
+  return out;
+}
+/* หน้าต่างพรีวิว: sp = { title, img | frame(+sandbox), open, dl, dlName, copy, del, note } */
+function openPreview(sp){ openSheet((sheet, close) => {
+  let body;
+  if (sp.img) body = h('img', { class: 'pvimg', src: sp.img, alt: sp.title, referrerpolicy: 'no-referrer' });
+  else if (sp.frame){ body = h('iframe', { class: 'pvframe', src: sp.frame, title: sp.title, referrerpolicy: 'no-referrer' }); if (sp.sandbox) body.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups'); }
+  else body = h('div', { class: 'empty-note' }, 'ไฟล์ชนิดนี้ดูตัวอย่างในหน้านี้ไม่ได้ กด "ดาวน์โหลด" หรือ "เปิดต้นฉบับ" เพื่อดูไฟล์');
+  let armed = false;
+  const del = sp.del ? h('button', { class: 'btn ghost sm', on: { click: async () => { if (!armed){ armed = true; del.textContent = 'กดอีกครั้งเพื่อลบ'; del.className = 'btn warn sm'; return; } if (await sp.del()) close(); } } }, 'ลบไฟล์') : null;
+  const a = (href, t, dl) => { const e = h('a', { class: 'btn ghost sm', href, target: '_blank', rel: 'noopener noreferrer', style: 'text-decoration:none' }, t); if (dl) e.setAttribute('download', dl); return e; };
+  sheet.append(h('div', { class: 'hd' }, h('h2', { style: 'word-break:break-all' }, sp.title), closeBtn(close)), body,
+    sp.note ? h('div', { class: 'small muted', style: 'margin-top:6px' }, sp.note) : null,
+    h('div', { class: 'row', style: 'margin-top:10px' }, sp.open ? a(sp.open, 'เปิดต้นฉบับ') : null, sp.dl ? a(sp.dl, 'ดาวน์โหลด', sp.dlName || '') : null, sp.copy ? h('button', { class: 'btn ghost sm', on: { click: () => copyText(sp.copy, 'คัดลอกลิงก์แล้ว') } }, 'คัดลอกลิงก์') : null, ro() ? null : del));
+}); }
+function fileSpec(it, m){
+  if (it.team){
+    const sp = { title: it.name, open: safeUrl(it.url), copy: it.url, note: (it.size ? sizeTxt(it.size) + '  |  ' : '') + 'ไฟล์เก็บใน Google Drive (ต้องล็อกอินบัญชีที่มีสิทธิ์จึงจะเห็นพรีวิว)' };
+    if (it.did) sp.dl = driveDl(it.did);
+    if (it.did && isImgItem(it)) sp.img = 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(it.did) + '&sz=w1600';
+    else if (it.did){ sp.frame = 'https://drive.google.com/file/d/' + encodeURIComponent(it.did) + '/preview'; sp.sandbox = true; }
+    sp.del = async () => { const ok = await remoteWrite({ action: 'fileDelete', id: it.id }); if (ok) toast('ลบไฟล์แล้ว (อยู่ในถังขยะของ Drive 30 วัน)'); return ok; };
+    return sp;
+  }
+  const u = blobUrl(it.d), sp = { title: it.name, dl: u, dlName: it.name, note: sizeTxt(it.size || 0) + '  |  เก็บในเครื่องนี้เท่านั้น (เปิดโหมดทีมเพื่อแชร์ผ่าน Drive)' };
+  if (isImgItem(it)) sp.img = u; else if (isPdfItem(it)) sp.frame = u;
+  sp.del = async () => { await idbRun('readwrite', s => s.delete(it.id)); try { URL.revokeObjectURL(blobUrls.get(it.id)); } catch (e) {} blobUrls.delete(it.id); await loadDocs(); toast('ลบไฟล์แล้ว'); render(); return true; };
+  return sp;
+}
+function linkSpec(l){ return { title: l.host, img: l.img, frame: l.view, sandbox: !!l.view, open: l.url, copy: l.url, note: l.url }; }
+async function mtgUpload(m, list){
+  if (mtgBusy.on || !list.length) return; mtgBusy.on = true; let n = 0; const bad = [];
+  toast('กำลังแนบ ' + list.length + ' ไฟล์ ...');
+  for (const f of list){
+    const nm = f.name || ('photo-' + Date.now() + '.jpg');
+    if (!f.size || BAD_EXT.test(nm)){ bad.push(nm); continue; }
+    if (isTeam()){
+      if (f.size > TEAM_MAX){ bad.push(nm + ' (เกิน 20 MB)'); continue; }
+      try { await uploadOne(f, { cat: 'รายงานการประชุม', ref: 'QMR ครั้งที่ ' + m.no, note: '', issue: MTG_PFX + m.id }); n++; }
+      catch (er) { bad.push(nm + ' (' + (FILE_ERR[er && er.code] || ERR_TXT[er && er.code] || 'ไม่สำเร็จ') + ')'); if (er && er.code === 'unauthorized') break; }
+    } else {
+      if (f.size > DOC_MAX){ bad.push(nm + ' (เกิน 25 MB)'); continue; }
+      try { await idbRun('readwrite', s => s.put({ id: newId(), name: nm, size: f.size, type: f.type || '', cat: 'รายงานการประชุม', ref: 'QMR ครั้งที่ ' + m.no, note: '', mtg: m.id, at: nowISO(), blob: f })); n++; }
+      catch (er) { bad.push(nm); }
+    }
+  }
+  mtgBusy.on = false; if (!isTeam()) await loadDocs();
+  toast(n ? 'แนบไฟล์แล้ว ' + n + ' ไฟล์' + (bad.length ? ' · ไม่สำเร็จ: ' + bad.join(', ') : '') : 'แนบไม่ได้: ' + bad.join(', '));
+  render();
+}
+function mtgAttachBlock(m){
+  const files = mtgFiles(m), links = mtgLinks(m), total = files.length + links.length;
+  if (!total && ro()) return null;
+  const box = h('div', { class: 'mtg-att' }, h('div', { class: 'small muted', style: 'margin-top:8px' }, 'ไฟล์แนบและลิงก์' + (total ? ' (' + total + ')' : '') + (total ? '  กดเพื่อดูตัวอย่าง' : '')));
+  if (files.length) box.append(h('div', { class: 'atts' }, files.map(it => h('button', { class: 'att', type: 'button', 'aria-label': 'ดูตัวอย่าง ' + it.name, on: { click: () => openPreview(fileSpec(it, m)) } },
+    h('div', { class: 'pv' }, it.thumb ? h('img', { src: it.thumb, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer', on: { error: e => { e.target.replaceWith(document.createTextNode(extOf(it.name))); } } }) : extOf(it.name)),
+    h('div', { class: 'nm' }, it.name)))));
+  links.forEach(l => box.append(h('button', { class: 'lk', type: 'button', 'aria-label': 'ดูตัวอย่างลิงก์ ' + l.host, on: { click: () => openPreview(linkSpec(l)) } },
+    h('span', { class: 'ic' }, l.tag), h('span', { class: 'tx2' }, h('b', null, l.host), h('span', { class: 'small muted' }, l.url.length > 70 ? l.url.slice(0, 70) + '…' : l.url)))));
+  if (!ro()){
+    const mk = (accept, cap, multi) => { const i = h('input', { type: 'file', hidden: true, multiple: !!multi, on: { change: async e => { const l = [...e.target.files]; e.target.value = ''; await mtgUpload(m, l); } } }); if (accept) i.setAttribute('accept', accept); if (cap) i.setAttribute('capture', 'environment'); return i; };
+    const cam = mk('image/*', true, false), gal = mk('image/*', false, true), any = mk('', false, true);
+    box.append(h('div', { class: 'row noprint', style: 'margin-top:6px' },
+      h('button', { class: 'btn ghost sm', type: 'button', on: { click: () => cam.click() } }, '📷 ถ่ายรูป'),
+      h('button', { class: 'btn ghost sm', type: 'button', on: { click: () => gal.click() } }, '🖼 เลือกรูป'),
+      h('button', { class: 'btn ghost sm', type: 'button', on: { click: () => any.click() } }, '📎 แนบไฟล์'),
+      h('button', { class: 'btn ghost sm', type: 'button', on: { click: async () => {
+        const u = (window.prompt('วางลิงก์เอกสาร (https://...)') || '').trim(); if (!u) return;
+        if (!/^https?:\/\/\S+$/i.test(u)){ toast('ลิงก์ไม่ถูกต้อง'); return; }
+        const cur = S.plus[MTG_PFX + m.id] || m; if (String(cur.links || '').split('\n').indexOf(u) >= 0){ toast('มีลิงก์นี้แล้ว'); return; }
+        if (await setHait('plus', MTG_PFX + m.id, Object.assign({}, cur, { links: (cur.links ? cur.links + '\n' : '') + u }))) toast('เพิ่มลิงก์แล้ว');
+      } } }, '+ ลิงก์'), cam, gal, any),
+      h('div', { class: 'small muted' }, isTeam() ? 'ไฟล์เก็บใน Google Drive ของหน่วยงาน (≤ 20 MB) · ห้ามแนบข้อมูลส่วนบุคคลของผู้ป่วย' : 'ไฟล์เก็บในเครื่องนี้เท่านั้น · ห้ามแนบข้อมูลส่วนบุคคลของผู้ป่วย'));
+  }
+  return box;
+}
+async function mtgRemove(m){
+  if (await setHait('plus', MTG_PFX + m.id, null)){
+    if (S.plus['mdoc:' + m.id]) await setHait('plus', 'mdoc:' + m.id, null);
+    toast('ลบรายงานแล้ว (งานติดตามในแท็บประเด็นและไฟล์แนบยังอยู่ในแท็บเอกสาร)'); render();
+  }
+}
 function renderMtg(){
-  const root = $('#v-mtg'); root.textContent = ''; const ms = mtgList();
+  const root = $('#v-mtg'); root.textContent = '';
+  if (!isTeam() && !mtgDocsLoaded){ mtgDocsLoaded = true; loadDocs().then(() => { if (typeof renderNow === 'function') render(); }); } const ms = mtgList();
   const qi = S.issues.filter(i => i.unit === QMR_UNIT), open = qi.filter(isOpen), over = qi.filter(isOver), nx = ms.map(m => m.next).filter(d => d && d >= todayISO()).sort()[0];
   root.append(h('div', { class: 'stat' }, h('div', null, h('b', null, ms.length), h('span', null, 'ประชุมแล้ว')), h('div', { class: 'a' }, h('b', null, open.length), h('span', null, 'มติค้างติดตาม')), h('div', { class: 'a' }, h('b', null, over.length), h('span', null, 'เกินกำหนด')), h('div', null, h('b', null, nx ? fmt(nx) : '-'), h('span', null, 'ประชุมครั้งต่อไป'))));
   root.append(h('div', { class: 'row noprint', style: 'margin:0 0 10px' }, ro() ? null : h('button', { class: 'btn', on: { click: () => openMtg() } }, '+ บันทึกการประชุม'),
@@ -110,12 +248,12 @@ function renderMtg(){
   if (open.length) { const c = h('div', { class: 'card' }, h('h3', null, 'เรื่องสืบเนื่อง: มติที่ยังไม่ปิด (ยกเข้าวาระครั้งต่อไป)')); open.sort((a, b) => (a.due || '9').localeCompare(b.due || '9')).forEach(i => c.append(h('div', { class: 'small', style: 'margin:6px 0' }, h('b', null, labelOf(i) + ' '), i.text, h('span', { class: 'muted' }, (i.owner ? ' | ' + i.owner : '') + (i.due ? ' | กำหนด ' + fmt(i.due, { yr: true }) : '')), isOver(i) ? h('span', { class: 'pill hi', style: 'margin-left:6px' }, 'เกินกำหนด') : null))); root.append(c); }
   memoSection(root);
   if (!ms.length) { root.append(h('div', { class: 'empty-note' }, 'ยังไม่มีรายงานการประชุม กด "+ บันทึกการประชุม" เพื่อเริ่ม')); return; }
-  ms.forEach(m => root.append(h('div', { class: 'card mtg' }, h('div', { class: 'row' }, h('b', null, 'ประชุมครั้งที่ ' + m.no), h('span', { class: 'pill' }, fmt(m.date, { wd: true, yr: true })), h('span', { class: 'pill' + (m.st === 'รับรองแล้ว' ? ' done' : '') }, m.st)),
+  ms.forEach(m => root.append(h('div', { class: 'card mtg' }, h('div', { class: 'row' }, h('b', null, 'ประชุมครั้งที่ ' + m.no), h('span', { class: 'pill' }, fmt(m.date, { wd: true, yr: true })), h('span', { class: 'pill' + (m.st === 'รับรองแล้ว' ? ' done' : '') }, m.st),
+    ro() ? null : h('span', { class: 'row noprint', style: 'margin-left:auto;gap:6px' }, h('button', { class: 'btn ghost sm', type: 'button', on: { click: () => openMtg(m) } }, 'แก้ไข'), (() => { let armed = false; const d = h('button', { class: 'btn ghost sm', type: 'button', on: { click: async () => { if (!armed){ armed = true; d.textContent = 'กดอีกครั้งเพื่อลบ'; d.className = 'btn warn sm'; setTimeout(() => { armed = false; d.textContent = 'ลบ'; d.className = 'btn ghost sm'; }, 4000); return; } await mtgRemove(m); } } }, 'ลบ'); return d; })())),
     h('div', { class: 'small muted' }, [m.time && 'เวลา ' + m.time, m.place, m.chair && 'ประธาน ' + m.chair].filter(Boolean).join('  |  ')),
     m.attendees ? h('div', { class: 'small' }, h('span', { class: 'muted' }, 'ผู้เข้าร่วม '), m.attendees) : null, m.notes ? h('div', { class: 'tx', style: 'white-space:pre-wrap' }, m.notes) : null,
     (m.res || []).map((r, k) => { const i = issOf(r); return h('div', { class: 'small', style: 'margin:6px 0;padding-left:8px;border-left:3px solid var(--line)' }, (k + 1) + '. ' + r.t, h('div', { class: 'muted' }, [r.std, r.owner && 'รับผิดชอบ ' + r.owner, r.due && 'กำหนด ' + fmt(r.due, { yr: true })].filter(Boolean).join('  |  '), i ? h('span', { class: 'pill' + (!isOpen(i) ? ' done' : isOver(i) ? ' hi' : ''), style: 'margin-left:6px' }, (!isOpen(i) ? 'ปิดแล้ว' : isOver(i) ? 'เกินกำหนด' : i.status) + ' ' + labelOf(i)) : null)); }),
-    h('div', { class: 'row noprint', style: 'margin-top:6px' }, h('button', { class: 'btn sm', on: { click: () => { location.href = 'editor.html?m=' + encodeURIComponent(m.id); } } }, S.plus['mdoc:' + m.id] ? 'เปิดหน้าพิมพ์รายงาน' : 'พิมพ์รายงาน (แบบ Word)'), ro() ? null : h('button', { class: 'btn ghost sm', on: { click: () => openMtg(m) } }, 'แก้ไข'),
-      h('button', { class: 'btn ghost sm', on: { click: async () => { try { await navigator.clipboard.writeText(mtgText(m)); toast('คัดลอกสรุปแล้ว วางใน LINE/อีเมลได้'); } catch (e) { saveFile('รายงานประชุม-QMR-ครั้งที่-' + m.no + '.txt', mtgText(m), 'text/plain'); } } } }, 'คัดลอกสรุป'),
+    mtgAttachBlock(m), h('div', { class: 'row noprint', style: 'margin-top:6px' }, h('button', { class: 'btn sm', on: { click: () => { location.href = 'editor.html?m=' + encodeURIComponent(m.id); } } }, S.plus['mdoc:' + m.id] ? 'เปิดหน้าพิมพ์รายงาน' : 'พิมพ์รายงาน (แบบ Word)'), h('button', { class: 'btn ghost sm', on: { click: async () => { try { await navigator.clipboard.writeText(mtgText(m)); toast('คัดลอกสรุปแล้ว วางใน LINE/อีเมลได้'); } catch (e) { saveFile('รายงานประชุม-QMR-ครั้งที่-' + m.no + '.txt', mtgText(m), 'text/plain'); } } } }, 'คัดลอกสรุป'),
       h('button', { class: 'btn ghost sm', on: { click: () => window.print() } }, 'พิมพ์'),
       h('button', { class: 'btn ghost sm', on: { click: () => saveFile('รายงานประชุม-QMR-ครั้งที่-' + m.no + '.doc', wordDoc('รายงานการประชุม QMR ครั้งที่ ' + m.no, S.plus['mdoc:' + m.id] && S.plus['mdoc:' + m.id].html ? S.plus['mdoc:' + m.id].html : meetingPaperHtml(m)), 'application/msword') } }, 'Word (.doc)'),
       h('button', { class: 'btn sm', on: { click: () => openMemo({ meeting: m }) } }, 'บันทึกข้อความ')))));
@@ -348,7 +486,7 @@ function openAttach(i){ openSheet((sheet, close) => { sheet.append(h('div', { cl
 function openFileEdit(f){ openSheet((sheet, close) => {
   const name = h('input', { type: 'text', value: f.name }), ref = h('input', { type: 'text', value: f.ref || '' }), note = h('input', { type: 'text', value: f.note || '' });
   const cats = DOC_CATS.includes(f.cat) ? DOC_CATS : DOC_CATS.concat(f.cat); const cat = h('select', null, cats.map(c => h('option', { selected: c === f.cat }, c)));
-  const iss = h('select', null, h('option', { value: '' }, 'ไม่ผูกกับประเด็น'), S.issues.slice().sort((a, b) => numOf(b) - numOf(a)).map(i => h('option', { value: i.id, selected: i.id === f.issue }, labelOf(i) + ' ' + String(i.text || '').slice(0, 40))));
+  const iss = h('select', null, h('option', { value: '' }, 'ไม่ผูกกับประเด็น'), f.issue && f.issue.indexOf('mtg:') === 0 ? h('option', { value: f.issue, selected: true }, 'ผูกกับการประชุม (' + (f.ref || 'QMR') + ')') : null, S.issues.slice().sort((a, b) => numOf(b) - numOf(a)).map(i => h('option', { value: i.id, selected: i.id === f.issue }, labelOf(i) + ' ' + String(i.text || '').slice(0, 40))));
   const err = h('div');
   sheet.append(h('div', { class: 'hd' }, h('h2', null, 'แก้ไขข้อมูลไฟล์'), closeBtn(close)), h('label', null, 'ชื่อไฟล์ (เปลี่ยนชื่อใน Drive ด้วย)'), name, h('label', null, 'หมวดเอกสาร (ย้ายโฟลเดอร์ใน Drive ด้วย)'), cat, h('label', null, 'อ้างอิงมาตรฐาน/เลขที่หนังสือ'), ref, h('label', null, 'คำอธิบาย'), note, h('label', null, 'ผูกกับประเด็น'), iss, err,
     h('div', { class: 'row', style: 'margin-top:16px' }, h('button', { class: 'btn', on: { click: async () => {
