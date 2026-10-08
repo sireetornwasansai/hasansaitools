@@ -41,12 +41,49 @@ function stdGapText(){
   const rows = STDS.filter(s => (stdScore(s.id) > 0 && stdScore(s.id) <= 2) || stdHiRisk(s)).sort((a, b) => (stdScore(a.id) || 9) - (stdScore(b.id) || 9)).slice(0, 12);
   return rows.length ? GAP_HEAD + '\n' + rows.map(s => '   - ' + s.id + ' ' + stdName(s) + (stdScore(s.id) ? ' (คะแนน ' + stdScore(s.id) + ')' : '') + (stdHiRisk(s) ? ' [เสี่ยงสูงค้าง]' : '')).join('\n') : '';
 }
+/* ---------- ประวัติการให้คะแนนรายมาตรฐาน: ครั้งที่ + คอมเม้น แก้ไข/ลบได้ (เก็บใน plus คีย์ stdlog:ID = { l: [...] }) ---------- */
+const stdLog = id => { const v = S.plus['stdlog:' + id]; return v && Array.isArray(v.l) ? v.l.slice() : []; };
+const stdLogSorted = id => stdLog(id).sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.at).localeCompare(String(b.at)));
+async function stdLogSave(id, list){
+  const l = list.slice().sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.at).localeCompare(String(b.at)));
+  if (!(await setHait('plus', 'stdlog:' + id, l.length ? { l } : null))) return false;
+  const last = l.length ? +l[l.length - 1].score || 0 : 0;
+  return setHait('plus', 'std:' + id, last || null);
+}
+function openStdLog(s){ openSheet((sheet, close) => {
+  const body = h('div'); let editId = '';
+  const who = () => { try { return shared.on && shared.uid ? nameOf(shared.uid) : ''; } catch (e) { return ''; } };
+  const draw = () => {
+    body.textContent = ''; const list = stdLogSorted(s.id), cur = stdScore(s.id);
+    body.append(h('div', { class: 'small muted', style: 'margin:0 0 8px' }, 'ประเมินแล้ว ' + list.length + ' ครั้ง  |  คะแนนปัจจุบัน ' + (cur ? cur + ' · ' + DALI[cur][0] : 'ยังไม่ประเมิน') + ' (นับจากครั้งล่าสุด)'));
+    if (!ro()){
+      const d = h('input', { type: 'date', value: todayISO() }), sc = h('select', null, [1, 2, 3, 4, 5].map(n => h('option', { value: n, selected: n === (cur || 3) }, n + ' · ' + DALI[n][0] + ' ' + DALI[n][1]))), tx = h('textarea', { placeholder: 'คอมเม้น: เหตุผลที่ให้คะแนน หลักฐาน สิ่งที่ต้องปรับปรุง', style: 'min-height:80px' }), er = h('div');
+      body.append(h('div', { class: 'card', style: 'padding:10px;margin:0 0 10px' }, h('b', null, 'เพิ่มการประเมิน ครั้งที่ ' + (list.length + 1)), h('div', { class: 'two' }, h('div', null, h('label', null, 'วันที่ประเมิน'), d), h('div', null, h('label', null, 'คะแนน'), sc)), h('label', null, 'คอมเม้น'), tx, er,
+        h('button', { class: 'btn', style: 'margin-top:8px', type: 'button', on: { click: async () => { if (!d.value){ er.textContent = ''; er.append(h('div', { class: 'warnbox' }, 'เลือกวันที่ก่อน')); return; } if (!tx.value.trim()){ er.textContent = ''; er.append(h('div', { class: 'warnbox' }, 'ใส่คอมเม้นก่อนบันทึก')); return; } if (await stdLogSave(s.id, list.concat([{ id: newId(), date: d.value, score: +sc.value, text: tx.value.trim(), by: who(), at: nowISO() }]))){ toast('บันทึกครั้งที่ ' + (list.length + 1) + ' แล้ว'); draw(); render(); } } } }, 'บันทึกการประเมิน')));
+    }
+    if (!list.length) body.append(h('div', { class: 'empty-note' }, cur ? 'มีคะแนนเดิม ' + cur + ' ที่ยังไม่มีคอมเม้น เพิ่มครั้งแรกเพื่อเริ่มบันทึกประวัติ' : 'ยังไม่มีการประเมิน'));
+    list.forEach((e, k) => {
+      if (editId === e.id && !ro()){
+        const d = h('input', { type: 'date', value: e.date }), sc = h('select', null, [1, 2, 3, 4, 5].map(n => h('option', { value: n, selected: n === +e.score }, n + ' · ' + DALI[n][0]))), tx = h('textarea', { style: 'min-height:80px' }, e.text || '');
+        body.append(h('div', { class: 'card', style: 'padding:10px;margin:6px 0' }, h('b', null, 'แก้ไขครั้งที่ ' + (k + 1)), h('div', { class: 'two' }, h('div', null, h('label', null, 'วันที่'), d), h('div', null, h('label', null, 'คะแนน'), sc)), h('label', null, 'คอมเม้น'), tx,
+          h('div', { class: 'row', style: 'margin-top:8px' }, h('button', { class: 'btn sm', type: 'button', on: { click: async () => { if (!d.value || !tx.value.trim()){ toast('ใส่วันที่และคอมเม้นให้ครบ'); return; } if (await stdLogSave(s.id, list.map(x => x.id === e.id ? Object.assign({}, x, { date: d.value, score: +sc.value, text: tx.value.trim(), edited: nowISO() }) : x))){ editId = ''; toast('แก้ไขครั้งที่ ' + (k + 1) + ' แล้ว'); draw(); render(); } } } }, 'บันทึก'), h('button', { class: 'btn ghost sm', type: 'button', on: { click: () => { editId = ''; draw(); } } }, 'ยกเลิก'))));
+        return;
+      }
+      let armed = false;
+      const del = h('button', { class: 'btn ghost sm', type: 'button', on: { click: async () => { if (!armed){ armed = true; del.textContent = 'กดอีกครั้งเพื่อลบ'; del.className = 'btn warn sm'; return; } if (await stdLogSave(s.id, list.filter(x => x.id !== e.id))){ toast('ลบครั้งที่ ' + (k + 1) + ' แล้ว'); draw(); render(); } } } }, 'ลบ');
+      body.append(h('div', { style: 'margin:8px 0;padding-top:8px;border-top:1px solid var(--line)' }, h('div', { class: 'row' }, h('b', null, 'ครั้งที่ ' + (k + 1)), h('span', { class: 'pill' }, fmt(e.date, { yr: true })), h('span', { class: 'pill ' + (+e.score <= 2 ? 'hi' : +e.score >= 4 ? 'done' : 'mid') }, 'คะแนน ' + e.score + ' · ' + DALI[+e.score][0])),
+        h('div', { style: 'white-space:pre-wrap;margin:4px 0' }, e.text), h('div', { class: 'small muted' }, (e.by ? 'โดย ' + e.by : '') + (e.edited ? '  (แก้ไขแล้ว)' : '')),
+        ro() ? null : h('div', { class: 'row', style: 'margin-top:4px' }, h('button', { class: 'btn ghost sm', type: 'button', on: { click: () => { editId = e.id; draw(); } } }, 'แก้ไข'), del)));
+    });
+  };
+  sheet.append(h('div', { class: 'hd' }, h('h2', null, s.id + ' ' + stdName(s)), closeBtn(close)), body); draw();
+}); }
 function renderStd(){
   const root = $('#v-std'); root.textContent = '';
   const sc = STDS.filter(s => stdScore(s.id) > 0), avg = sc.length ? (sc.reduce((n, s) => n + stdScore(s.id), 0) / sc.length).toFixed(1) : '-';
   const risk = STDS.filter(stdHiRisk).length, low = STDS.filter(STD_PRED.low).length, nw = STDS.filter(stdNew), nwDone = nw.filter(s => stdScore(s.id) > 0).length;
   root.append(h('div', { class: 'stat' }, h('div', null, h('b', null, sc.length + '/' + STDS.length), h('span', null, 'ประเมินแล้ว')), h('div', null, h('b', null, avg), h('span', null, 'คะแนนเฉลี่ย')), h('div', { class: 'a' }, h('b', null, low), h('span', null, 'คะแนน 1-2')), h('div', { class: 'a' }, h('b', null, risk), h('span', null, 'มี Gap เสี่ยงสูง'))));
-  root.append(h('p', { class: 'small muted', style: 'margin:0 0 6px' }, 'มาตรฐานโรงพยาบาลและบริการสุขภาพ ฉบับที่ 6 · กดปุ่มคะแนนเพื่อเปลี่ยน (1-5) ระบบนับประเด็นที่อ้างมาตรฐานนั้นให้อัตโนมัติ · ข้อใหม่ใน HA6 ประเมินแล้ว ' + nwDone + '/' + nw.length));
+  root.append(h('p', { class: 'small muted', style: 'margin:0 0 6px' }, 'มาตรฐานโรงพยาบาลและบริการสุขภาพ ฉบับที่ 6 · กดปุ่มคะแนนเพื่อบันทึกการประเมินแต่ละครั้งพร้อมคอมเม้น (1-5) ระบบนับประเด็นที่อ้างมาตรฐานนั้นให้อัตโนมัติ · ข้อใหม่ใน HA6 ประเมินแล้ว ' + nwDone + '/' + nw.length));
   root.append(h('details', { class: 'card noprint', style: 'padding:8px 12px' }, h('summary', { style: 'cursor:pointer;font-weight:600' }, 'เกณฑ์ให้คะแนน 1-5 (แนวคิด 3C-DALI)'),
     h('div', { class: 'small', style: 'margin-top:6px' }, [1, 2, 3, 4, 5].map(n => h('div', { style: 'margin:3px 0' }, h('b', null, n + ' · ' + DALI[n][0] + '  '), DALI[n][1]))),
     h('div', { class: 'small muted', style: 'margin-top:6px' }, 'ตัวช่วยตีความภายในแอป ให้ยึดแบบฟอร์มรายงานประเมินตนเอง (SAR) ฉบับล่าสุดของ สรพ. เป็นหลัก')));
@@ -61,12 +98,12 @@ function renderStd(){
       const v = stdScore(s.id), iss = stdIssues(s.id), op = iss.filter(isOpen).length, hi = iss.filter(i => isOpen(i) && i.risk === 'สูง').length, gap = (v > 0 && v <= 2) || hi > 0;
       card.append(h('div', { class: 'itm std' }, h('div', { class: 'id' }, s.id), h('div', null, h('div', null, stdName(s), stdNew(s) ? h('span', { class: 'pill mid', style: 'margin-left:6px' }, 'ใหม่ใน HA6') : null), h('div', { class: 'small muted' }, (s.rounds.length ? 'ตรวจรอบ ' + s.rounds.join(', ') : 'ยังไม่ผูกรอบ') + (iss.length ? '  |  ประเด็น ' + iss.length + ' ค้าง ' + op : '')), hi ? h('span', { class: 'pill hi' }, 'เสี่ยงสูงค้าง ' + hi) : null,
           gap && !ro() ? h('div', { class: 'noprint', style: 'margin-top:4px' }, h('button', { class: 'btn ghost sm', type: 'button', on: { click: () => openIssue({ std: s.id, text: 'ปิด Gap มาตรฐาน ' + s.id + ' ' + stdName(s) + (v ? ' (ประเมินตนเอง ' + v + ' คะแนน)' : ''), type: 'ต้องติดตามเพิ่ม', risk: hi ? 'สูง' : 'กลาง' }) } }, '+ สร้างประเด็นปิด Gap')) : null),
-        h('button', { class: 'st', 'data-s': v >= 4 ? '2' : v >= 1 ? '1' : '0', disabled: ro(), 'aria-label': 'มาตรฐาน ' + s.id + ' คะแนน ' + (v ? v + ' ' + DALI[v][1] : 'ยังไม่ประเมิน') + ' กดเพื่อเปลี่ยน', on: { click: () => setHait('plus', 'std:' + s.id, (v + 1) % 6) } }, v ? 'คะแนน ' + v + ' · ' + DALI[v][0] : 'ยังไม่ประเมิน')));
+        h('button', { class: 'st', 'data-s': v >= 4 ? '2' : v >= 1 ? '1' : '0', 'aria-label': 'มาตรฐาน ' + s.id + ' คะแนน ' + (v ? v + ' ' + DALI[v][1] : 'ยังไม่ประเมิน') + ' ประเมินแล้ว ' + stdLog(s.id).length + ' ครั้ง กดเพื่อดูประวัติและเพิ่มคอมเม้น', on: { click: () => openStdLog(s) } }, (v ? 'คะแนน ' + v + ' · ' + DALI[v][0] : 'ยังไม่ประเมิน') + ' (' + stdLog(s.id).length + ' ครั้ง)')));
     });
     root.append(card);
   });
   if (!shown) root.append(h('div', { class: 'empty-note' }, 'ไม่มีมาตรฐานตามตัวกรองนี้'));
-  root.append(h('div', { class: 'row noprint' }, h('button', { class: 'btn', on: { click: () => window.print() } }, 'พิมพ์ / บันทึก PDF'), h('button', { class: 'btn ghost', on: { click: () => saveFile('ประเมินตนเอง-มาตรฐาน-HA6.csv', '\uFEFF' + [['มาตรฐาน', 'ชื่อ', 'ใหม่ใน HA6', 'รอบที่ตรวจ', 'คะแนน', 'ระดับ DALI', 'ประเด็นทั้งหมด', 'ประเด็นค้าง', 'เสี่ยงสูงค้าง']].concat(STDS.map(s => { const i = stdIssues(s.id), v = stdScore(s.id); return [s.id, stdName(s), stdNew(s) ? 'ใช่' : '', s.rounds.join(' '), v || '', v ? DALI[v][0] : '', i.length, i.filter(isOpen).length, i.filter(x => isOpen(x) && x.risk === 'สูง').length]; })).map(r => r.map(csvEsc).join(',')).join('\r\n'), 'text/csv') } }, 'ส่งออกคะแนน (CSV)')));
+  root.append(h('div', { class: 'row noprint' }, h('button', { class: 'btn', on: { click: () => window.print() } }, 'พิมพ์ / บันทึก PDF'), h('button', { class: 'btn ghost', on: { click: () => saveFile('ประเมินตนเอง-มาตรฐาน-HA6.csv', '\uFEFF' + [['มาตรฐาน', 'ชื่อ', 'ใหม่ใน HA6', 'รอบที่ตรวจ', 'คะแนน', 'ระดับ DALI', 'ประเมินกี่ครั้ง', 'คอมเม้นล่าสุด', 'ประเด็นทั้งหมด', 'ประเด็นค้าง', 'เสี่ยงสูงค้าง']].concat(STDS.map(s => { const i = stdIssues(s.id), v = stdScore(s.id); return [s.id, stdName(s), stdNew(s) ? 'ใช่' : '', s.rounds.join(' '), v || '', v ? DALI[v][0] : '', stdLog(s.id).length, (stdLogSorted(s.id).pop() || {}).text || '', i.length, i.filter(isOpen).length, i.filter(x => isOpen(x) && x.risk === 'สูง').length]; })).map(r => r.map(csvEsc).join(',')).join('\r\n'), 'text/csv') } }, 'ส่งออกคะแนน (CSV)'), h('button', { class: 'btn ghost', on: { click: () => saveFile('ประวัติคอมเม้น-มาตรฐาน-HA6.csv', '\uFEFF' + [['มาตรฐาน', 'ชื่อ', 'ครั้งที่', 'วันที่', 'คะแนน', 'คอมเม้น', 'ผู้บันทึก']].concat(STDS.flatMap(s => stdLogSorted(s.id).map((e, k) => [s.id, stdName(s), k + 1, e.date, e.score, e.text, e.by || '']))).map(r => r.map(csvEsc).join(',')).join('\r\n'), 'text/csv') } }, 'ส่งออกประวัติคอมเม้น (CSV)')));
 }
 /* ---------- ประชุม QMR: บันทึกรายงานการประชุม + ติดตามมติ (เก็บใน plus คีย์ mtg:ID ไม่ต้องแก้ GAS) ---------- */
 const QMR_UNIT = 'คณะกรรมการ QMR';
