@@ -1,0 +1,4 @@
+{
+  "outputDirectory": "public",
+  "functions": { "api/gas.js": { "maxDuration": 60 } }
+}
