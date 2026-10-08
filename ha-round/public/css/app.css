@@ -290,3 +290,21 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri)!important;box-sh
 .qfab[hidden]{display:none}
 @media (max-width:420px){.qfab{padding:12px 16px}.qfab span:last-child{font-size:15px}}
 @media print{.qfab{display:none!important}}
+/* ===== ปฏิทิน: กรอบคมชัด กดแม่นยำ ===== */
+.grid{gap:6px}
+.day{border:1.5px solid #B4C5D8;background:#fff;box-shadow:0 1px 0 rgba(35,65,105,.08);cursor:pointer;transition:border-color .12s,box-shadow .12s,transform .08s}
+.day.empty{border:0;box-shadow:none;background:transparent}
+.day.wk{background:#F1F5F9;border-color:#C9D5E2;color:#7A8A9C}
+.day.hol{border-color:#E39A93;background:#FBE0DD}
+.day.hait{border-color:#D9B45A}
+.day.round{border-color:#1F7A5A}
+.day.backup{border-color:#D9AE2C}
+.day.aft{border-color:#6CC3D4}
+.day.survey{border-color:#2B59C3}
+.day.review{border-color:#5E479A}
+.day:not(.empty):hover{border-color:var(--pri);box-shadow:0 0 0 2px rgba(47,111,181,.35);outline:0;transform:translateY(-1px);z-index:1}
+.day:not(.empty):active{transform:scale(.96);background:var(--pri-soft)}
+.day.today{border:2.5px solid var(--pri);background:var(--pri-soft)}
+.day:focus-visible{outline:3px solid var(--pri);outline-offset:1px}
+.dow{font-weight:600;color:var(--ink)}
+.legend span::before{border:1px solid rgba(35,65,105,.35)}
