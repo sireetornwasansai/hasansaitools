@@ -6,43 +6,52 @@
 <title>พิมพ์รายงานการประชุม QMR</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,400;0,600;1,400&display=swap" media="print" onload="this.media='all'">
 <style>
-:root{--blue:#6B1F33;--bg:#e6e6ea;--line:#d0d0d6}
+:root{--pri:#3F78BD;--pri-soft:#E8F0FA;--bg:#EEF3F8;--line:#DCE4EC;--ink:#2B3A4A;--mut:#6B7C8D}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
-body{font-family:'Sarabun','Noto Sans Thai',system-ui,sans-serif;background:var(--bg);color:#222;display:flex;flex-direction:column}
-button,select,input{font:inherit}
-.top{background:var(--blue);color:#fff;display:flex;align-items:center;gap:10px;padding:6px 12px;flex-wrap:wrap}
-.top a,.top button{color:#fff;background:rgba(255,255,255,.15);border:0;border-radius:6px;padding:5px 12px;text-decoration:none;cursor:pointer;font-size:14px}
-.top a:hover,.top button:hover{background:rgba(255,255,255,.28)}
-.top .ttl{flex:1;font-weight:600;min-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#st{font-size:13px;opacity:.9}
-.tabs{display:flex;gap:2px;background:#f3f3f6;padding:4px 10px 0;border-bottom:1px solid var(--line)}
-.tabs button{border:0;background:none;padding:6px 14px;cursor:pointer;border-radius:6px 6px 0 0;font-size:14px}
-.tabs button[aria-selected=true]{background:#fff;font-weight:600;color:var(--blue);box-shadow:0 -2px 0 var(--blue) inset}
-.rib{background:#fff;border-bottom:1px solid var(--line);padding:6px 10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;min-height:46px}
+body{font-family:'Sarabun','Noto Sans Thai',system-ui,sans-serif;background:var(--bg);color:var(--ink);display:flex;flex-direction:column}
+button,select,input{font:inherit;color:inherit}
+.top{background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;padding:8px 14px;flex-wrap:wrap}
+.top a,.top button{color:var(--ink);background:#F2F6FA;border:1px solid var(--line);border-radius:999px;padding:6px 14px;text-decoration:none;cursor:pointer;font-size:14px;transition:background .15s}
+.top a:hover,.top button:hover{background:var(--pri-soft)}
+.top button.pri{background:var(--pri);border-color:var(--pri);color:#fff;font-weight:600}
+.top button.pri:hover{background:#346aa8}
+.top .ttl{flex:1;font-weight:600;font-size:16px;min-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#st{font-size:13px;color:var(--mut)}
+.tabs{display:flex;gap:4px;background:#fff;padding:6px 12px 0}
+.tabs button{border:0;background:none;padding:7px 16px;cursor:pointer;border-radius:10px 10px 0 0;font-size:14px;color:var(--mut)}
+.tabs button[aria-selected=true]{background:var(--pri-soft);font-weight:600;color:var(--pri)}
+.rib{background:var(--pri-soft);padding:8px 12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;min-height:50px;border-bottom:1px solid var(--line)}
 .rib[hidden]{display:none}
-.g{display:flex;gap:2px;align-items:center;padding-right:8px;margin-right:4px;border-right:1px solid var(--line)}
+.g{display:flex;gap:3px;align-items:center;padding:2px 8px 2px 2px;margin-right:2px;border-right:1px solid #cfdcec}
 .g:last-child{border:0}
-.rib button{min-width:32px;height:32px;border:1px solid transparent;background:none;border-radius:5px;cursor:pointer;font-size:14px;padding:0 7px}
-.rib button:hover{background:#eee}.rib button.on{background:#f0d9df;border-color:#d9aab8}
-.rib select{height:32px;border:1px solid var(--line);border-radius:5px;background:#fff}
-.stage{flex:1;overflow:auto;padding:22px 10px 60px}
-.wrap{width:21cm;margin:0 auto;transform-origin:top center}
-.paper{background:#fff;min-height:29.7cm;padding:2cm 2cm 2cm 3cm;box-shadow:0 1px 6px rgba(0,0,0,.25);
+.rib button{min-width:34px;height:34px;border:1px solid transparent;background:#fff;border-radius:8px;cursor:pointer;font-size:14px;padding:0 9px;transition:background .12s}
+.rib button:hover{background:#fff;border-color:var(--pri)}.rib button.on{background:var(--pri);color:#fff}
+.rib select,.rib input{height:34px;border:1px solid var(--line);border-radius:8px;background:#fff;padding:0 6px}
+.stage{flex:1;overflow:auto;padding:24px 10px 80px}
+.wrap{width:21cm;margin:0 auto}
+.paper{background:#fff;min-height:29.7cm;padding:2cm 2cm 2cm 3cm;border-radius:4px;box-shadow:0 2px 14px rgba(60,90,130,.15);
  font-family:'TH Sarabun New','Sarabun',sans-serif;font-size:16pt;line-height:1.15;outline:0;
- background-image:repeating-linear-gradient(to bottom,transparent 0,transparent calc(29.7cm - 2px),#c9c9d2 calc(29.7cm - 2px),#c9c9d2 29.7cm)}
+ background-image:repeating-linear-gradient(to bottom,transparent 0,transparent calc(29.7cm - 2px),#dbe5f0 calc(29.7cm - 2px),#dbe5f0 29.7cm)}
 .paper p{margin:0 0 4pt}
 .paper table{border-collapse:collapse;width:100%;margin:6pt 0}
-.paper td,.paper th{border:1px solid #000;padding:3pt 5pt;vertical-align:top}
-.paper th{background:#f1f1f1}
-.paper hr.pb{border:0;border-top:2px dashed #999;margin:10pt 0;page-break-after:always}
-.sb{background:#f3f3f6;border-top:1px solid var(--line);display:flex;gap:14px;align-items:center;padding:3px 12px;font-size:13px;color:#444}
+.paper td,.paper th{border:1px solid #333;padding:3pt 5pt;vertical-align:top}
+.paper th{background:#f1f5f9}
+.paper hr.pb{border:0;border-top:2px dashed #b7c4d4;margin:10pt 0;page-break-after:always}
+.att{width:21cm;max-width:100%;margin:16px auto 0;background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 18px;font-size:15px}
+.att h3{margin:0 0 8px;font-size:16px}
+.att .it{display:flex;gap:8px;align-items:center;padding:6px 0;border-top:1px solid #edf1f5}
+.att .it a{flex:1;color:var(--pri);word-break:break-all}
+.att button{border:1px solid var(--line);background:#F2F6FA;border-radius:999px;padding:4px 12px;cursor:pointer}
+.att button.pri{background:var(--pri);color:#fff;border-color:var(--pri)}
+.att .mut{color:var(--mut);font-size:13px}
+.sb{background:#fff;border-top:1px solid var(--line);display:flex;gap:14px;align-items:center;padding:4px 14px;font-size:13px;color:var(--mut)}
 .sb .sp{flex:1}.sb input[type=range]{width:110px}
-#meter.bad{color:#b00;font-weight:600}
+#meter.bad{color:#c0392b;font-weight:600}
 @page{size:A4;margin:2cm 2cm 2cm 3cm}
 @media print{
- body{display:block;background:#fff}.top,.tabs,.rib,.sb{display:none!important}
- .stage{overflow:visible;padding:0}.wrap{width:auto;transform:none!important;zoom:1!important}
+ body{display:block;background:#fff}.top,.tabs,.rib,.sb,.att{display:none!important}
+ .stage{overflow:visible;padding:0}.wrap{width:auto;zoom:1!important}
  .paper{box-shadow:none;padding:0;min-height:0;background-image:none}
 }
 </style>
@@ -52,7 +61,8 @@ button,select,input{font:inherit}
   <a href="./#mtg" id="back" title="กลับหน้าบันทึกการประชุม QMR">← กลับหน้าประชุม</a>
   <span class="ttl" id="ttl">รายงานการประชุม</span>
   <span id="st">กำลังโหลด…</span>
-  <button id="bSave">บันทึก</button>
+  <button id="bAtt" title="แนบไฟล์">📎 แนบไฟล์</button>
+  <button id="bSave" class="pri">บันทึก</button>
   <button id="bPrint">พิมพ์ / PDF</button>
   <button id="bWord">ดาวน์โหลด Word</button>
 </div>
@@ -91,7 +101,9 @@ button,select,input{font:inherit}
   <div class="g"><span>ขอบกระดาษ (ซ้าย)</span><select id="mL"><option value="3">3 ซม. (ราชการ)</option><option value="2">2 ซม.</option><option value="2.5">2.5 ซม.</option></select></div>
   <div class="g"><span>ขนาด</span><b>A4 แนวตั้ง</b></div>
 </div>
-<div class="stage" id="stage"><div class="wrap" id="wrap"><div class="paper" id="doc" contenteditable="true" spellcheck="false" lang="th"></div></div></div>
+<div class="stage" id="stage"><div class="wrap" id="wrap"><div class="paper" id="doc" contenteditable="true" spellcheck="false" lang="th"></div></div>
+<div class="att" id="att"><h3>📎 ไฟล์แนบประกอบการประชุม</h3><div id="attList" class="mut">กำลังโหลด…</div><div style="margin-top:8px"><button class="pri" id="bAtt2">+ เลือกไฟล์แนบ</button> <span class="mut">ไม่เกิน 20 MB ต่อไฟล์ · เก็บใน Google Drive ของทีม</span></div></div></div>
+<input type="file" id="fIn" multiple hidden>
 <div class="sb"><span id="wc">0 คำ</span><span id="pg">1 หน้า</span><span id="meter"></span><span class="sp"></span>
  <label>ซูม <input type="range" id="zm" min="40" max="150" value="100"> <span id="zv">100%</span></label></div>
 <script>
@@ -237,6 +249,40 @@ $('#bWord').addEventListener('click', () => {
   a.download = 'รายงานประชุม-QMR-ครั้งที่-' + (M ? M.no : '') + '.doc'; document.body.append(a); a.click(); a.remove();
 });
 
+/* ---------- ไฟล์แนบ (เก็บใน Drive ของทีม ผ่านระบบอัปโหลดเดิม) ---------- */
+const FREF = 'mtg:' + id, CH = 3 * 786432, BAD = /\.(exe|bat|cmd|com|scr|msi|js|vbs|ps1|sh|jar|apk|dll|lnk)$/i;
+let files = [];
+const safeUrl = u => /^https:\/\/(drive|docs)\.google\.com\//.test(u || '') ? u : '#';
+const fsz = n => n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
+function drawAtt(msg) {
+  const box = $('#attList'); box.textContent = '';
+  if (!team) { box.textContent = 'การแนบไฟล์ใช้ได้เมื่อเข้าร่วมทีม (ไฟล์เก็บใน Google Drive) · กลับไปหน้าภาพรวมเพื่อเข้าร่วมทีมก่อน'; return; }
+  if (msg) { const m = document.createElement('div'); m.textContent = msg; box.append(m); }
+  if (!files.length && !msg) { box.textContent = 'ยังไม่มีไฟล์แนบ'; return; }
+  files.forEach((f, k) => {
+    const row = document.createElement('div'); row.className = 'it';
+    const a = document.createElement('a'); a.href = safeUrl(f.url); a.target = '_blank'; a.rel = 'noopener'; a.textContent = (k + 1) + '. ' + f.name + ' (' + fsz(+f.size || 0) + ')';
+    const b1 = document.createElement('button'); b1.textContent = 'ใส่ชื่อลงเอกสาร'; b1.onclick = () => ins('<p>เอกสารแนบที่ ' + (k + 1) + ' ' + esc(f.name) + '</p>');
+    const b2 = document.createElement('button'); b2.textContent = 'ลบ'; b2.onclick = async () => { if (!confirm('ลบไฟล์ "' + f.name + '" ?')) return; try { await call({ action: 'fileDelete', id: f.id }); await loadFiles(); } catch (e) { drawAtt('ลบไม่สำเร็จ: ' + e); } };
+    row.append(a, b1, b2); box.append(row);
+  });
+}
+async function loadFiles() { if (!team) return drawAtt(); try { const j = await call({ action: 'snapshot' }); files = (j.files || []).filter(f => f.ref === FREF && !f.deleted); drawAtt(); } catch (e) { drawAtt('โหลดไฟล์แนบไม่สำเร็จ: ' + e); } }
+const b64 = blob => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.onerror = () => no('อ่านไฟล์ไม่ได้'); r.readAsDataURL(blob); });
+async function upload(file) {
+  if (BAD.test(file.name)) throw 'ไม่รับไฟล์ชนิดนี้';
+  if (file.size > 20 * 1048576) throw 'ไฟล์ใหญ่เกิน 20 MB';
+  const total = Math.max(1, Math.ceil(file.size / CH)), uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  for (let k = 0; k < total; k++) {
+    drawAtt('กำลังอัปโหลด ' + file.name + ' (' + Math.round(k / total * 100) + '%)…');
+    const data = await b64(file.slice(k * CH, (k + 1) * CH));
+    for (let t = 0; ; t++) { try { await call({ action: 'fileChunk', uid, idx: k, total, name: file.name, mime: file.type || '', size: file.size, data, cat: 'รายงานการประชุม QMR', ref: FREF, note: 'แนบจากรายงานการประชุมครั้งที่ ' + (M ? M.no : '') }); break; } catch (e) { if (t < 2 && /busy|เชื่อมต่อ/.test(String(e))) { await new Promise(r => setTimeout(r, 1500)); continue; } throw e; } }
+  }
+}
+const pick = () => { if (!team) { alert('ต้องเข้าร่วมทีมก่อนจึงแนบไฟล์ได้'); return; } $('#fIn').click(); };
+$('#bAtt').addEventListener('click', pick); $('#bAtt2').addEventListener('click', pick);
+$('#fIn').addEventListener('change', async e => { const fs = [...e.target.files]; e.target.value = ''; for (const f of fs) { try { await upload(f); } catch (er) { drawAtt('แนบ ' + f.name + ' ไม่สำเร็จ: ' + er); await new Promise(r => setTimeout(r, 1800)); } } await loadFiles(); });
+
 /* ---------- เริ่มต้น ---------- */
 (async () => {
   if (!id) { st.textContent = 'ไม่พบรหัสการประชุม · เปิดจากหน้าประชุม'; doc.contentEditable = 'false'; return; }
@@ -251,7 +297,7 @@ $('#bWord').addEventListener('click', () => {
   st.textContent = saved ? 'บันทึกล่าสุด' + (saved.by ? ' โดย ' + saved.by : '') : 'ฉบับใหม่ (ยังไม่บันทึก)';
   if (draft) { dirty = true; st.textContent = 'พบฉบับร่างค้างในเครื่อง · กด บันทึก'; }
   else if (!saved) { dirty = true; timer = setTimeout(save, 1500); }
-  meter(); doc.focus();
+  meter(); doc.focus(); loadFiles();
 })();
 })();
 </script>
