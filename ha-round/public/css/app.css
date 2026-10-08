@@ -326,3 +326,17 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri)!important;box-sh
 .shot img{width:100%;height:100%;object-fit:cover;display:block}
 .shot .x{position:absolute;top:2px;right:2px;width:28px;height:28px;border:0;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;font-size:18px;line-height:1;cursor:pointer}
 .tabadd .lg{display:none}@media (min-width:1024px){.tabadd .lg{display:inline}}
+
+/* ---- แท็บประชุม: ไฟล์แนบ + พรีวิว / มาตรฐาน HA6 ---- */
+.atts{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px;margin-top:6px}
+.att{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:0;overflow:hidden;cursor:pointer;text-align:left;font:inherit;color:inherit;display:flex;flex-direction:column;min-width:0}
+.att .pv{height:84px;background:var(--paper);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:var(--ink-2);letter-spacing:.04em;overflow:hidden}
+.att .pv img{width:100%;height:100%;object-fit:cover;display:block}
+.att .nm{padding:5px 8px;font-size:13px;line-height:1.3;word-break:break-all;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.att:focus-visible,.lk:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.lk{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:12px;background:var(--card);padding:8px 10px;margin:6px 0 0;cursor:pointer;width:100%;text-align:left;font:inherit;color:inherit;min-height:48px}
+.lk .ic{flex:none;min-width:44px;height:32px;padding:0 6px;border-radius:9px;background:var(--survey-soft);color:var(--survey);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px}
+.lk .tx2{min-width:0;font-size:14px}.lk .tx2 b{display:block;word-break:break-all;font-weight:600}
+.pvframe{width:100%;height:68vh;height:68dvh;border:1px solid var(--line);border-radius:10px;background:#fff;display:block}
+.pvimg{max-width:100%;max-height:68vh;max-height:68dvh;display:block;margin:0 auto;border-radius:8px}
+@media print{.mtg-att .atts{display:none}.mtg-att .lk{display:none}}
