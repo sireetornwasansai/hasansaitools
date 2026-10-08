@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>พิมพ์รายงานการประชุม QMR</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,400;0,600;1,400&display=swap" media="print" onload="this.media='all'">
+<style>
+:root{--blue:#6B1F33;--bg:#e6e6ea;--line:#d0d0d6}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:'Sarabun','Noto Sans Thai',system-ui,sans-serif;background:var(--bg);color:#222;display:flex;flex-direction:column}
+button,select,input{font:inherit}
+.top{background:var(--blue);color:#fff;display:flex;align-items:center;gap:10px;padding:6px 12px;flex-wrap:wrap}
+.top a,.top button{color:#fff;background:rgba(255,255,255,.15);border:0;border-radius:6px;padding:5px 12px;text-decoration:none;cursor:pointer;font-size:14px}
+.top a:hover,.top button:hover{background:rgba(255,255,255,.28)}
+.top .ttl{flex:1;font-weight:600;min-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#st{font-size:13px;opacity:.9}
+.tabs{display:flex;gap:2px;background:#f3f3f6;padding:4px 10px 0;border-bottom:1px solid var(--line)}
+.tabs button{border:0;background:none;padding:6px 14px;cursor:pointer;border-radius:6px 6px 0 0;font-size:14px}
+.tabs button[aria-selected=true]{background:#fff;font-weight:600;color:var(--blue);box-shadow:0 -2px 0 var(--blue) inset}
+.rib{background:#fff;border-bottom:1px solid var(--line);padding:6px 10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;min-height:46px}
+.rib[hidden]{display:none}
+.g{display:flex;gap:2px;align-items:center;padding-right:8px;margin-right:4px;border-right:1px solid var(--line)}
+.g:last-child{border:0}
+.rib button{min-width:32px;height:32px;border:1px solid transparent;background:none;border-radius:5px;cursor:pointer;font-size:14px;padding:0 7px}
+.rib button:hover{background:#eee}.rib button.on{background:#f0d9df;border-color:#d9aab8}
+.rib select{height:32px;border:1px solid var(--line);border-radius:5px;background:#fff}
+.stage{flex:1;overflow:auto;padding:22px 10px 60px}
+.wrap{width:21cm;margin:0 auto;transform-origin:top center}
+.paper{background:#fff;min-height:29.7cm;padding:2cm 2cm 2cm 3cm;box-shadow:0 1px 6px rgba(0,0,0,.25);
+ font-family:'TH Sarabun New','Sarabun',sans-serif;font-size:16pt;line-height:1.15;outline:0;
+ background-image:repeating-linear-gradient(to bottom,transparent 0,transparent calc(29.7cm - 2px),#c9c9d2 calc(29.7cm - 2px),#c9c9d2 29.7cm)}
+.paper p{margin:0 0 4pt}
+.paper table{border-collapse:collapse;width:100%;margin:6pt 0}
+.paper td,.paper th{border:1px solid #000;padding:3pt 5pt;vertical-align:top}
+.paper th{background:#f1f1f1}
+.paper hr.pb{border:0;border-top:2px dashed #999;margin:10pt 0;page-break-after:always}
+.sb{background:#f3f3f6;border-top:1px solid var(--line);display:flex;gap:14px;align-items:center;padding:3px 12px;font-size:13px;color:#444}
+.sb .sp{flex:1}.sb input[type=range]{width:110px}
+#meter.bad{color:#b00;font-weight:600}
+@page{size:A4;margin:2cm 2cm 2cm 3cm}
+@media print{
+ body{display:block;background:#fff}.top,.tabs,.rib,.sb{display:none!important}
+ .stage{overflow:visible;padding:0}.wrap{width:auto;transform:none!important;zoom:1!important}
+ .paper{box-shadow:none;padding:0;min-height:0;background-image:none}
+}
+</style>
+</head>
+<body>
+<div class="top">
+  <a href="./#mtg" id="back" title="กลับหน้าบันทึกการประชุม QMR">← กลับหน้าประชุม</a>
+  <span class="ttl" id="ttl">รายงานการประชุม</span>
+  <span id="st">กำลังโหลด…</span>
+  <button id="bSave">บันทึก</button>
+  <button id="bPrint">พิมพ์ / PDF</button>
+  <button id="bWord">ดาวน์โหลด Word</button>
+</div>
+<div class="tabs" role="tablist">
+  <button data-t="home" aria-selected="true">หน้าแรก</button>
+  <button data-t="ins" aria-selected="false">แทรก</button>
+  <button data-t="lay" aria-selected="false">เค้าโครง</button>
+</div>
+<div class="rib" data-p="home">
+  <div class="g"><button data-c="undo" title="ย้อนกลับ (Ctrl+Z)">↶</button><button data-c="redo" title="ทำซ้ำ (Ctrl+Y)">↷</button></div>
+  <div class="g">
+    <select id="fam" title="ฟอนต์"><option value="'TH Sarabun New','Sarabun'">TH Sarabun New</option><option value="'Sarabun'">Sarabun</option><option value="'Noto Sans Thai'">Noto Sans Thai</option><option value="'TH SarabunPSK','Sarabun'">TH SarabunPSK</option><option value="Tahoma">Tahoma</option></select>
+    <select id="sz" title="ขนาด"></select>
+  </div>
+  <div class="g">
+    <button data-c="bold" title="ตัวหนา (Ctrl+B)"><b>B</b></button><button data-c="italic" title="ตัวเอียง"><i>I</i></button><button data-c="underline" title="ขีดเส้นใต้"><u>U</u></button>
+    <button data-c="superscript">x²</button><button data-c="subscript">x₂</button>
+  </div>
+  <div class="g">
+    <button data-c="justifyLeft" title="ชิดซ้าย">⇤</button><button data-c="justifyCenter" title="กึ่งกลาง">↔</button><button data-c="justifyRight" title="ชิดขวา">⇥</button><button data-c="justifyFull" title="กระจายแบบไทย">☰</button>
+  </div>
+  <div class="g">
+    <button data-c="insertUnorderedList" title="หัวข้อย่อยแบบจุด">•≡</button><button data-c="insertOrderedList" title="เลขลำดับ">1.≡</button>
+    <button data-c="outdent" title="ลดการเยื้อง">⇠</button><button data-c="indent" title="เพิ่มการเยื้อง">⇢</button>
+  </div>
+  <div class="g"><select id="lh" title="ระยะบรรทัด"><option value="">ระยะบรรทัด</option><option>1</option><option>1.15</option><option>1.5</option><option>2</option></select></div>
+</div>
+<div class="rib" data-p="ins" hidden>
+  <div class="g"><label>ตาราง&nbsp;<input id="tr" type="number" min="1" max="20" value="3" style="width:52px"> แถว ×&nbsp;<input id="tc" type="number" min="1" max="8" value="3" style="width:52px"> คอลัมน์</label><button id="bTbl">แทรกตาราง</button></div>
+  <div class="g"><button id="bRowA">+ แถว</button><button id="bRowD">− แถว</button></div>
+  <div class="g"><button id="bPb">แทรกตัวแบ่งหน้า</button><button id="bHr">เส้นคั่น</button></div>
+  <div class="g"><button id="bSig">ช่องลงชื่อ</button></div>
+  <div class="g"><button id="bReset" title="สร้างเนื้อหาใหม่จากข้อมูลการประชุม">ใส่แบบฟอร์มใหม่จากข้อมูลประชุม</button></div>
+</div>
+<div class="rib" data-p="lay" hidden>
+  <div class="g"><span>ขอบกระดาษ (ซ้าย)</span><select id="mL"><option value="3">3 ซม. (ราชการ)</option><option value="2">2 ซม.</option><option value="2.5">2.5 ซม.</option></select></div>
+  <div class="g"><span>ขนาด</span><b>A4 แนวตั้ง</b></div>
+</div>
+<div class="stage" id="stage"><div class="wrap" id="wrap"><div class="paper" id="doc" contenteditable="true" spellcheck="false" lang="th"></div></div></div>
+<div class="sb"><span id="wc">0 คำ</span><span id="pg">1 หน้า</span><span id="meter"></span><span class="sp"></span>
+ <label>ซูม <input type="range" id="zm" min="40" max="150" value="100"> <span id="zv">100%</span></label></div>
+<script>
+(() => {
+'use strict';
+const $ = (s, r) => (r || document).querySelector(s), $$ = (s, r) => [...(r || document).querySelectorAll(s)];
+const id = new URLSearchParams(location.search).get('m') || '';
+const KEY = 'mdoc:' + id, MAX = 45000;
+const doc = $('#doc'), st = $('#st');
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const TH = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const TD = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+const thLong = s => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); if (!m) return ''; return +m[3] + ' ' + TH[+m[2] - 1] + ' ' + (+m[1] + 543); };
+const thWd = s => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); return m ? TD[new Date(+m[1], +m[2] - 1, +m[3]).getDay()] : ''; };
+const tm = s => { s = String(s || '').trim().replace(/\s*น\.?$/, ''); return s ? s + ' น.' : ''; };
+
+/* ---------- เก็บข้อมูล: ใช้ที่เก็บเดียวกับหน้าหลัก (ชีตของทีม หรือ localStorage) ---------- */
+const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } };
+const cfg = lsGet('ha.remote', null);
+const team = !!(cfg && cfg.key);
+async function call(body) {
+  let r;
+  try { r = await fetch('/api/gas', { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({ key: cfg.key, by: cfg.name || '' }, body)) }); }
+  catch (e) { throw 'ออฟไลน์หรือเชื่อมต่อไม่ได้'; }
+  let j; try { j = await r.json(); } catch (e) { throw 'ระบบตอบกลับไม่ถูกต้อง'; }
+  if (!j.ok) throw j.error === 'unauthorized' ? 'รหัสผ่านทีมไม่ถูกต้อง' : j.error === 'forbidden' ? 'บัญชีนี้ดูได้อย่างเดียว' : (j.error || 'ผิดพลาด');
+  return j;
+}
+async function loadPlus() {
+  if (team) { const j = await call({ action: 'snapshot' }); lsSet('ha.remoteCache', j); return (j.hait && j.hait.plus) || {}; }
+  return lsGet('ha.plus', {});
+}
+async function putPlus(val) {
+  if (team) { const j = await call({ action: 'hait', kind: 'plus', key2: KEY, val }); lsSet('ha.remoteCache', j); return; }
+  const p = lsGet('ha.plus', {}); p[KEY] = val; if (!lsSet('ha.plus', p)) throw 'เครื่องนี้เก็บข้อมูลไม่ได้';
+}
+
+/* ---------- แบบฟอร์มรายงานการประชุม (สร้างจากข้อมูลประชุม) ---------- */
+let M = null;
+function template(m) {
+  const P = (s, a) => '<p' + (a ? ' style="' + a + '"' : '') + '>' + s + '</p>';
+  const people = s => String(s || '').split(/\n|,\s*/).map(x => x.trim()).filter(Boolean);
+  const list = a => a.map((x, k) => P((k + 1) + '. ' + esc(x), 'margin-left:1.2cm;text-indent:-.7cm')).join('');
+  const ags = String(m.agenda || '').split('\n').map(x => x.trim()).filter(Boolean).map(x => x.replace(/^\d+[.)]\s*/, ''));
+  const att = people(m.attendees), abs = people(m.absent), rr = m.res || [];
+  const when = 'วัน' + thWd(m.date) + 'ที่ ' + thLong(m.date) + (m.place ? ' ณ ' + esc(m.place) : '');
+  const tbl = '<table><thead><tr><th style="width:7%">ที่</th><th>มติ / งานที่ต้องดำเนินการ</th><th style="width:22%">ผู้รับผิดชอบ</th><th style="width:18%">กำหนดเสร็จ</th></tr></thead><tbody>' +
+    (rr.length ? rr.map((r, k) => '<tr><td style="text-align:center">' + (k + 1) + '</td><td>' + esc(r.t) + (r.std ? ' [' + esc(r.std) + ']' : '') + '</td><td>' + esc(r.owner || '-') + '</td><td style="text-align:center">' + (r.due ? esc(thLong(r.due)) : '-') + '</td></tr>').join('') : '<tr><td>&nbsp;</td><td></td><td></td><td></td></tr>') + '</tbody></table>';
+  const sg = (role, name) => '<td style="border:0;text-align:center;width:50%;padding-top:24pt">ลงชื่อ ................................................<br>(' + (name ? esc(name) : '................................................') + ')<br>' + role + '</td>';
+  return P('<b>รายงานการประชุมคณะกรรมการ QMR<br>ครั้งที่ ' + esc(m.no) + '</b>', 'text-align:center;font-size:22pt') +
+    P(when, 'text-align:center') + '<hr style="border:0;border-top:1px solid #000">' +
+    (m.chair ? P('<b>ประธานการประชุม</b>&nbsp; ' + esc(m.chair)) : '') +
+    (att.length ? P('<b>ผู้มาประชุม</b>', 'margin-top:8pt') + list(att) : '') +
+    (abs.length ? P('<b>ผู้ไม่มาประชุม (ลา)</b>', 'margin-top:8pt') + list(abs) : '') +
+    (m.time ? P('<b>เริ่มประชุมเวลา</b>&nbsp; ' + esc(tm(m.time)), 'margin-top:8pt') : '') +
+    ags.map((x, k) => P('<b>ระเบียบวาระที่ ' + (k + 1) + '</b>&nbsp; ' + esc(x), 'margin-top:6pt') + P('<br>', 'text-indent:1.25cm')).join('') +
+    P('<b>สรุปการประชุม</b>', 'margin-top:8pt') + (String(m.notes || '').split('\n').filter(x => x.trim()).map(x => P(esc(x.trim()), 'text-indent:1.25cm')).join('') || P('<br>', 'text-indent:1.25cm')) +
+    P('<b>มติที่ประชุม / งานที่ต้องติดตาม</b>', 'margin-top:8pt') + tbl +
+    (m.next ? P('<b>นัดประชุมครั้งต่อไป</b>&nbsp; ' + esc(thLong(m.next)), 'margin-top:8pt') : '') +
+    (m.end ? P('<b>เลิกประชุมเวลา</b>&nbsp; ' + esc(tm(m.end)), 'margin-top:8pt') : '') +
+    '<table style="border:0;margin-top:20pt"><tr>' + sg('ผู้จดรายงานการประชุม', m.recorder) + sg('ผู้ตรวจรายงานการประชุม', m.checker) + '</tr></table>';
+}
+
+/* ---------- กรองเนื้อหา (กันสคริปต์/สไตล์แปลก ๆ จากการวาง) ---------- */
+const OK_TAG = new Set('P DIV BR B STRONG I EM U S SUB SUP SPAN UL OL LI TABLE THEAD TBODY TR TD TH HR H1 H2 H3 COL COLGROUP'.split(' '));
+const OK_ATTR = new Set(['style', 'colspan', 'rowspan', 'width', 'class']);
+function clean(html) {
+  const d = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html');
+  (function walk(n) {
+    [...n.children].forEach(c => {
+      if (!OK_TAG.has(c.tagName)) { if (/^(SCRIPT|STYLE|IFRAME|OBJECT|EMBED|LINK|META|FORM|INPUT|SVG|IMG)$/.test(c.tagName)) { c.remove(); return; } walk(c); c.replaceWith(...c.childNodes); return; }
+      [...c.attributes].forEach(a => { if (!OK_ATTR.has(a.name)) c.removeAttribute(a.name); });
+      if (c.hasAttribute('style')) c.setAttribute('style', c.getAttribute('style').split(';').filter(x => /^\s*(text-align|text-indent|margin[a-z-]*|font-size|font-weight|font-style|font-family|text-decoration|line-height|width|color|background-color|padding[a-z-]*|border[a-z-]*)\s*:/i.test(x) && !/url\(|expression|javascript/i.test(x)).join(';'));
+      walk(c);
+    });
+  })(d.body);
+  return d.body.innerHTML;
+}
+
+/* ---------- บันทึก ---------- */
+let dirty = false, busy = false, timer = null;
+const size = () => new Blob([doc.innerHTML]).size;
+function meter() {
+  const n = doc.innerHTML.length, el = $('#meter');
+  el.textContent = 'พื้นที่เก็บ ' + Math.round(n / MAX * 100) + '%'; el.className = n > MAX ? 'bad' : '';
+  $('#wc').textContent = (doc.innerText.trim() ? doc.innerText.trim().split(/\s+/).length : 0) + ' คำ';
+  $('#pg').textContent = Math.max(1, Math.ceil(doc.offsetHeight / (29.7 * 37.8))) + ' หน้า';
+}
+async function save(manual) {
+  if (busy) return; const html = clean(doc.innerHTML);
+  if (html.length > MAX) { st.textContent = 'เอกสารยาวเกินที่ระบบเก็บได้ (ฉบับร่างอยู่ในเครื่อง)'; lsSet('ha.mdocDraft:' + id, html); return; }
+  busy = true; st.textContent = 'กำลังบันทึก…';
+  try {
+    await putPlus({ html, at: new Date().toISOString(), by: (cfg && cfg.name) || '' });
+    dirty = false; lsSet('ha.mdocDraft:' + id, null);
+    st.textContent = 'บันทึกแล้ว ' + new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+  } catch (e) { lsSet('ha.mdocDraft:' + id, html); st.textContent = 'บันทึกขึ้นระบบไม่สำเร็จ: ' + e + ' (ฉบับร่างอยู่ในเครื่อง)'; }
+  finally { busy = false; }
+}
+const touch = () => { dirty = true; st.textContent = 'แก้ไขแล้ว…'; clearTimeout(timer); timer = setTimeout(save, 2500); meter(); };
+doc.addEventListener('input', touch);
+window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+
+/* ---------- เครื่องมือ ---------- */
+const sel = { r: null };
+document.addEventListener('selectionchange', () => { const s = getSelection(); if (s.rangeCount && doc.contains(s.anchorNode)) sel.r = s.getRangeAt(0).cloneRange(); refresh(); });
+const focusDoc = () => { doc.focus(); if (sel.r) { const s = getSelection(); s.removeAllRanges(); s.addRange(sel.r); } };
+const cmd = (c, v) => { focusDoc(); document.execCommand(c, false, v); touch(); };
+$$('.rib [data-c]').forEach(b => { b.addEventListener('mousedown', e => e.preventDefault()); b.addEventListener('click', () => cmd(b.dataset.c)); });
+function refresh() { $$('.rib [data-c]').forEach(b => { try { if (/^(bold|italic|underline|superscript|subscript|insertUnorderedList|insertOrderedList|justify)/.test(b.dataset.c)) b.classList.toggle('on', document.queryCommandState(b.dataset.c)); } catch (e) {} }); }
+$$('.tabs button').forEach(b => b.addEventListener('click', () => { $$('.tabs button').forEach(x => x.setAttribute('aria-selected', String(x === b))); $$('.rib').forEach(r => r.hidden = r.dataset.p !== b.dataset.t); }));
+$('#fam').addEventListener('change', e => cmd('fontName', e.target.value));
+const sz = $('#sz'); [12, 14, 16, 18, 20, 22, 24, 28, 32].forEach(n => sz.append(new Option(n, n, false, n === 16)));
+sz.addEventListener('change', () => { focusDoc(); const s = getSelection(); if (!s.rangeCount) return; const r = s.getRangeAt(0);
+  if (r.collapsed) return;
+  const span = document.createElement('span'); span.style.fontSize = sz.value + 'pt'; span.append(r.extractContents()); r.insertNode(span); touch(); });
+$('#lh').addEventListener('change', e => { if (!e.target.value) return; focusDoc(); const s = getSelection(); let n = s.anchorNode; while (n && n.parentNode !== doc) n = n.parentNode; if (n && n.style) { n.style.lineHeight = e.target.value; touch(); } e.target.value = ''; });
+const ins = h => { focusDoc(); document.execCommand('insertHTML', false, h); touch(); };
+$('#bTbl').addEventListener('click', () => { const r = Math.min(20, +$('#tr').value || 2), c = Math.min(8, +$('#tc').value || 2); ins('<table><tbody>' + ('<tr>' + '<td><br></td>'.repeat(c) + '</tr>').repeat(r) + '</tbody></table><p><br></p>'); });
+const cellNow = () => { const s = getSelection(); let n = s.anchorNode; while (n && n !== doc) { if (n.nodeName === 'TD' || n.nodeName === 'TH') return n; n = n.parentNode; } return null; };
+$('#bRowA').addEventListener('click', () => { const c = cellNow(); if (!c) return; const tr = c.parentNode, n = tr.cloneNode(true); [...n.cells].forEach(x => x.innerHTML = '<br>'); tr.after(n); touch(); });
+$('#bRowD').addEventListener('click', () => { const c = cellNow(); if (!c) return; const tr = c.parentNode; if (tr.parentNode.rows.length > 1) { tr.remove(); touch(); } });
+$('#bPb').addEventListener('click', () => ins('<hr class="pb"><p><br></p>'));
+$('#bHr').addEventListener('click', () => ins('<hr style="border:0;border-top:1px solid #000"><p><br></p>'));
+$('#bSig').addEventListener('click', () => ins('<table style="border:0"><tr><td style="border:0;text-align:center;padding-top:24pt">ลงชื่อ ................................................<br>(................................................)<br>ตำแหน่ง ................................................</td></tr></table><p><br></p>'));
+$('#bReset').addEventListener('click', () => { if (M && confirm('แทนที่เนื้อหาทั้งหมดด้วยแบบฟอร์มใหม่จากข้อมูลประชุม? (ข้อความที่พิมพ์ไว้จะหายไป)')) { doc.innerHTML = template(M); touch(); } });
+$('#mL').addEventListener('change', e => { doc.style.paddingLeft = e.target.value + 'cm'; });
+doc.addEventListener('keydown', e => { if (e.key === 'Tab') { e.preventDefault(); if (cellNow()) { const cs = $$('td,th', doc), i = cs.indexOf(cellNow()); const nx = cs[i + (e.shiftKey ? -1 : 1)]; if (nx) { const r = document.createRange(); r.selectNodeContents(nx); r.collapse(false); getSelection().removeAllRanges(); getSelection().addRange(r); } } else document.execCommand('insertHTML', false, '&emsp;&emsp;'); }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); save(true); } });
+doc.addEventListener('paste', e => { e.preventDefault(); const t = e.clipboardData.getData('text/html'); if (t) document.execCommand('insertHTML', false, clean(t)); else document.execCommand('insertText', false, e.clipboardData.getData('text/plain')); });
+doc.addEventListener('drop', e => e.preventDefault());
+
+/* ---------- ซูม / พิมพ์ / Word ---------- */
+const zm = $('#zm'); const setZoom = () => { $('#wrap').style.zoom = zm.value / 100; $('#zv').textContent = zm.value + '%'; };
+zm.addEventListener('input', setZoom);
+if (innerWidth < 900) { zm.value = Math.max(40, Math.floor((innerWidth - 20) / 8.27)); setZoom(); }
+$('#bSave').addEventListener('click', () => save(true));
+$('#bPrint').addEventListener('click', () => print());
+$('#bWord').addEventListener('click', () => {
+  const html = '\uFEFF<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>รายงานการประชุม QMR</title><!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View></w:WordDocument></xml><![endif]--><style>@page Section1{size:21cm 29.7cm;margin:2cm 2cm 2cm 3cm}div.Section1{page:Section1}body{font-family:"TH SarabunPSK","TH Sarabun New",Sarabun;font-size:16pt}p{margin:0 0 4pt}table{border-collapse:collapse;width:100%}td,th{border:1px solid #000;padding:3pt 5pt}</style></head><body><div class="Section1">' + clean(doc.innerHTML) + '</div></body></html>';
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([html], { type: 'application/msword' }));
+  a.download = 'รายงานประชุม-QMR-ครั้งที่-' + (M ? M.no : '') + '.doc'; document.body.append(a); a.click(); a.remove();
+});
+
+/* ---------- เริ่มต้น ---------- */
+(async () => {
+  if (!id) { st.textContent = 'ไม่พบรหัสการประชุม · เปิดจากหน้าประชุม'; doc.contentEditable = 'false'; return; }
+  let plus;
+  try { plus = await loadPlus(); } catch (e) { st.textContent = 'โหลดไม่สำเร็จ: ' + e; doc.contentEditable = 'false'; return; }
+  M = plus['mtg:' + id];
+  if (!M) { st.textContent = 'ไม่พบรายงานการประชุมนี้'; doc.contentEditable = 'false'; return; }
+  $('#ttl').textContent = 'รายงานการประชุม QMR ครั้งที่ ' + M.no;
+  document.title = 'รายงานการประชุม QMR ครั้งที่ ' + M.no;
+  const saved = plus[KEY], draft = lsGet('ha.mdocDraft:' + id, null);
+  doc.innerHTML = clean(draft || (saved && saved.html) || template(M));
+  st.textContent = saved ? 'บันทึกล่าสุด' + (saved.by ? ' โดย ' + saved.by : '') : 'ฉบับใหม่ (ยังไม่บันทึก)';
+  if (draft) { dirty = true; st.textContent = 'พบฉบับร่างค้างในเครื่อง · กด บันทึก'; }
+  else if (!saved) { dirty = true; timer = setTimeout(save, 1500); }
+  meter(); doc.focus();
+})();
+})();
+</script>
+</body>
+</html>
