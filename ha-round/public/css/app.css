@@ -308,3 +308,21 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri)!important;box-sh
 .day:focus-visible{outline:3px solid var(--pri);outline-offset:1px}
 .dow{font-weight:600;color:var(--ink)}
 .legend span::before{border:1px solid rgba(35,65,105,.35)}
+
+/* ปุ่มบันทึกประเด็นกลางแท็บล่าง + รูปแนบ */
+.tabadd{position:relative;overflow:visible;flex:1.15 1 0;background:transparent!important;color:var(--pri)!important;font-weight:700}
+.tabadd .plus{display:flex;align-items:center;justify-content:center;width:62px;height:62px;margin-top:-30px;border-radius:50%;font-size:40px;font-weight:300;line-height:1;color:#fff;background:linear-gradient(135deg,#2F6FB5,#2E9A86);box-shadow:0 6px 18px rgba(47,111,181,.45),0 0 0 5px var(--card,#fff)}
+.tabadd:active .plus{transform:scale(.92)}
+.tabadd .tx2{font-size:11px;margin-top:1px;white-space:nowrap}
+@media (max-width:420px){.tabadd .plus{width:58px;height:58px;font-size:36px}.tabadd .tx2{font-size:10.5px}}
+@media (min-width:1024px){
+  .tabadd{order:-1;flex:none;flex-direction:row;justify-content:center;gap:10px;min-height:56px;margin-bottom:8px;border-radius:14px;background:linear-gradient(135deg,#2F6FB5,#2E9A86)!important;color:#fff!important;box-shadow:0 6px 16px rgba(47,111,181,.35)}
+  .tabadd .plus{width:auto;height:auto;margin:0;background:none;box-shadow:none;font-size:30px}
+  .tabadd .tx2{font-size:16px;margin:0}
+}
+@media (max-height:480px) and (orientation:landscape) and (max-width:1023px){.tabadd .plus{width:44px;height:44px;margin-top:-16px;font-size:30px}}
+.shots{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.shot{position:relative;width:84px;height:84px;border-radius:10px;overflow:hidden;border:1px solid var(--line)}
+.shot img{width:100%;height:100%;object-fit:cover;display:block}
+.shot .x{position:absolute;top:2px;right:2px;width:28px;height:28px;border:0;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;font-size:18px;line-height:1;cursor:pointer}
+.tabadd .lg{display:none}@media (min-width:1024px){.tabadd .lg{display:inline}}
