@@ -386,3 +386,10 @@ input[type=text]:focus,input[type=password]:focus,input[type=date]:focus,select:
 .ev.qmr.off{opacity:.62}
 .ev.qmr.off .t{text-decoration:line-through}
 @media (prefers-contrast:more){.day.qmr{border-color:var(--qmr-ring)}}
+
+/* ปุ่มเข้าสู่ทีม (ส่วนหัว) แสดงเมื่อยังไม่ได้เข้าทีม หรือรหัสผ่านทีมหมดอายุ */
+.joinbtn{display:inline-flex;align-items:center;justify-content:center;gap:6px;margin-top:8px;min-height:44px;padding:8px 20px;border:0;border-radius:10px;background:#D4A53A;color:#1B1300;font:inherit;font-size:16px;font-weight:600;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.joinbtn[hidden]{display:none}
+.joinbtn:hover{background:#E2B64B}
+.joinbtn:focus-visible{outline:3px solid #fff;outline-offset:2px}
+@media print{.joinbtn{display:none!important}}
