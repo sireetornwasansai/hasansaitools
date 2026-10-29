@@ -8,8 +8,8 @@ module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'method' });
 
-  const { GAS_URL, GAS_SECRET } = process.env;
-  if (!GAS_URL || !GAS_SECRET) return res.status(500).json({ ok: false, error: 'server_config' });
+  const { GAS_URL, GAS_SECRET } = process.env;   // GAS_SECRET ไม่บังคับ: ส่งต่อเฉพาะถ้าตั้งไว้ (ให้ Code.gs เวอร์ชันเก่าที่ยังตรวจรหัสทำงานได้ระหว่างรอ Deploy ตัวใหม่)
+  if (!GAS_URL) return res.status(500).json({ ok: false, error: 'server_config' });
 
   let body = req.body;
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { body = null; } }
@@ -23,7 +23,7 @@ module.exports = async (req, res) => {
       method: 'POST',
       redirect: 'follow',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(Object.assign({}, body, { secret: GAS_SECRET })),
+      body: JSON.stringify(GAS_SECRET ? Object.assign({}, body, { secret: GAS_SECRET }) : body),
     });
     const text = await r.text();
     let j;

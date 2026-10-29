@@ -1,3 +1,9 @@
+> **อัปเดต: ไม่มีรหัส/สิทธิ์แล้ว** ใครเปิดลิงก์แอปก็ใช้ได้ทุกฟังก์ชัน · ไม่ต้องตั้ง `GAS_SECRET` อีก (Vercel ต้องตั้งแค่ `GAS_URL` = ลิงก์ `/exec`)
+> ขั้นตอน: วาง `gas/` ใน Apps Script → รัน `setupAll` → Deploy Web app (Execute as: Me, Who has access: Anyone) → ใส่ `GAS_URL` ใน Vercel → Redeploy
+> แก้ `Code.gs` แล้วต้อง Deploy → Manage deployments → Edit → **New version** บน deployment เดิม
+> ทดสอบอัตโนมัติ: cd tests && npm i && npm test (จำลอง Google Sheets/Apps Script ในเครื่อง ไม่ต้องใช้บัญชี Google) · GAS_SECRET ใน Vercel ไม่บังคับ (ถ้ายังตั้งไว้ proxy จะส่งต่อให้ Code.gs ตัวเก่า)
+> ปฏิทินแบบอิสระ (เบราว์เซอร์เครื่องเดียว) อยู่ที่ `/planner.html`
+
 # HA Round — แผน HA / HAIT / Hospital Round (รพ.สันทราย จ.เชียงใหม่)
 
 Frontend: GitHub → Vercel (static) · Proxy: `/api/gas` · Backend: Google Apps Script + Google Sheets

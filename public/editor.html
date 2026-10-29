@@ -256,7 +256,7 @@ const safeUrl = u => /^https:\/\/(drive|docs)\.google\.com\//.test(u || '') ? u 
 const fsz = n => n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
 function drawAtt(msg) {
   const box = $('#attList'); box.textContent = '';
-  if (!team) { box.textContent = 'การแนบไฟล์ใช้ได้เมื่อเข้าร่วมทีม (ไฟล์เก็บใน Google Drive) · กลับไปหน้าภาพรวมเพื่อเข้าร่วมทีมก่อน'; return; }
+  if (!team) { box.textContent = 'ยังแนบไฟล์ไม่ได้ในขณะนี้'; return; }
   if (msg) { const m = document.createElement('div'); m.textContent = msg; box.append(m); }
   if (!files.length && !msg) { box.textContent = 'ยังไม่มีไฟล์แนบ'; return; }
   files.forEach((f, k) => {
@@ -279,7 +279,7 @@ async function upload(file) {
     for (let t = 0; ; t++) { try { await call({ action: 'fileChunk', uid, idx: k, total, name: file.name, mime: file.type || '', size: file.size, data, cat: 'รายงานการประชุม QMR', ref: FREF, note: 'แนบจากรายงานการประชุมครั้งที่ ' + (M ? M.no : '') }); break; } catch (e) { if (t < 2 && /busy|เชื่อมต่อ/.test(String(e))) { await new Promise(r => setTimeout(r, 1500)); continue; } throw e; } }
   }
 }
-const pick = () => { if (!team) { alert('ต้องเข้าร่วมทีมก่อนจึงแนบไฟล์ได้'); return; } $('#fIn').click(); };
+const pick = () => { if (!team) { alert('ยังแนบไฟล์ไม่ได้ในขณะนี้'); return; } $('#fIn').click(); };
 $('#bAtt').addEventListener('click', pick); $('#bAtt2').addEventListener('click', pick);
 $('#fIn').addEventListener('change', async e => { const fs = [...e.target.files]; e.target.value = ''; for (const f of fs) { try { await upload(f); } catch (er) { drawAtt('แนบ ' + f.name + ' ไม่สำเร็จ: ' + er); await new Promise(r => setTimeout(r, 1800)); } } await loadFiles(); });
 

@@ -31,7 +31,7 @@ function doPost(e) {
   var b;
   try { b = JSON.parse(e.postData.contents); } catch (err) { return out_({ ok: false, error: 'bad_request' }); }
   var P = PropertiesService.getScriptProperties();
-  if (!P.getProperty('GAS_SECRET') || b.secret !== P.getProperty('GAS_SECRET')) return out_({ ok: false, error: 'unauthorized' });
+  /* ไม่ตรวจรหัสลับ: ทุกคนที่เข้าผ่านแอปใช้งานได้ทุกฟังก์ชัน */
   var lock = LockService.getScriptLock();
   var isRead = (b.action === 'ver' || b.action === 'snapshot' || b.action === 'memoGet');
   var extra = null;

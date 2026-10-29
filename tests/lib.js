@@ -1,0 +1,20 @@
+const {JSDOM}=require('jsdom'),fs=require('fs'),mk=require('./gasmock');
+const ROOT=require('path').resolve(__dirname,'..');
+process.env.GAS_URL='https://x/exec';const proxy=require(ROOT+'/api/gas.js');
+exports.ROOT=ROOT;exports.newGas=()=>mk(ROOT);
+exports.boot=async(G,opt={})=>{
+ const html=fs.readFileSync(ROOT+'/public/index.html','utf8').replace(/<script>[\s\S]*<\/script>/,'');
+ const dom=new JSDOM(html,{url:'http://localhost/',runScripts:'outside-only',pretendToBeVisual:true});const w=dom.window;const errs=[];
+ w.HA_POLL_MS=opt.poll||500;w.DATA=JSON.parse(fs.readFileSync(ROOT+'/public/data/plan.json','utf8'));
+ w.fetch=async(u,i)=>{if(u!=='/api/gas')throw new Error('net '+u);const body=JSON.parse(i.body);let out;const res={setHeader(){},status(c){this.c=c;return this},json(j){out={c:this.c||200,j}}};
+  global.fetch=async(uu,o)=>({text:async()=>JSON.stringify(await G.post(JSON.parse(o.body)))});await proxy({method:'POST',body},res);return{ok:out.c<400,status:out.c,json:async()=>out.j}};
+ w.matchMedia=()=>({matches:false,addEventListener(){},addListener(){}});w.scrollTo=()=>{};
+ w.addEventListener('error',e=>errs.push(e.message));w.console.error=(...a)=>errs.push(a.map(String).join(' ').slice(0,200));
+ w.eval(fs.readFileSync(ROOT+'/public/js/app.js','utf8'));
+ const $=(s,r)=>(r||w.document).querySelector(s),$$=(s,r)=>[...(r||w.document).querySelectorAll(s)];
+ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+ const click=e=>e.dispatchEvent(new w.MouseEvent('click',{bubbles:true}));
+ const set=(e,v)=>{e.value=v;e.dispatchEvent(new w.Event('input',{bubbles:true}));e.dispatchEvent(new w.Event('change',{bubbles:true}))};
+ const btn=(root,re)=>$$('button',root).find(b=>re.test(b.textContent.trim()));
+ await sleep(500);return{w,$,$$,sleep,click,set,btn,errs};
+};

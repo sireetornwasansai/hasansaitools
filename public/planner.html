@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ปฏิทินวางแผนงาน</title>
+<link rel="icon" href="legacy/icons/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap">
+<style>
+/* ค่าสี/ระยะทั้งหมดเป็นค่าชั่วคราว (ไม่มี DESIGN.md) ปรับที่ :root ที่เดียว */
+:root{--bg:#F6F8FB;--panel:#fff;--ink:#17202B;--mute:#5E6B7A;--line:#DCE3EC;--acc:#1F6FEB;--wk:#F0F3F8;--today:#FFF4CC;--r:10px;color-scheme:light dark}
+@media(prefers-color-scheme:dark){:root{--bg:#0F141B;--panel:#161D26;--ink:#E8EDF3;--mute:#95A3B3;--line:#2B3644;--acc:#5B9BFF;--wk:#121923;--today:#3A3210}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 'IBM Plex Sans Thai',system-ui,sans-serif;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+.top{position:sticky;top:0;z-index:5;background:var(--panel);border-bottom:1px solid var(--line);padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.top h1{font-size:18px;margin:0 8px 0 0;flex:1 1 180px;min-width:150px}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:var(--r);padding:8px 12px;min-height:40px}
+.btn.p{background:var(--acc);border-color:var(--acc);color:#fff}
+.btn.d{color:#C62828;border-color:#C62828}
+.seg{display:flex}.seg .btn{border-radius:0;margin-left:-1px}.seg .btn:first-child{border-radius:var(--r) 0 0 var(--r);margin:0}.seg .btn:last-child{border-radius:0 var(--r) var(--r) 0}
+.btn[aria-pressed=true]{background:var(--acc);border-color:var(--acc);color:#fff}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px}
+.bar h2{font-size:18px;margin:0;flex:1 1 140px}
+input[type=text],input[type=search],input[type=date],input[type=time],input[type=number],select,textarea{width:100%;border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:8px 10px;min-height:40px}
+.bar input{width:auto}
+.cats{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 8px}
+.cat{border:1px solid var(--line);background:var(--panel);border-radius:99px;padding:3px 10px;font-size:13px;display:inline-flex;gap:6px;align-items:center}
+.cat i{width:10px;height:10px;border-radius:50%;background:var(--c)}
+.cat[aria-pressed=false]{opacity:.45;text-decoration:line-through}
+.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));margin:0 12px 24px;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--panel)}
+.dow{padding:6px;text-align:center;font-size:13px;color:var(--mute);background:var(--wk);border-bottom:1px solid var(--line)}
+.cell{min-height:104px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:4px;cursor:cell;overflow:hidden}
+.cell:nth-child(7n+7){border-right:0}
+.cell.wk{background:var(--wk)}.cell.out{opacity:.5}.cell.today{background:var(--today)}
+.cell:focus-visible,.chip:focus-visible,.btn:focus-visible{outline:2px solid var(--acc);outline-offset:-2px}
+.cell.over{outline:2px dashed var(--acc);outline-offset:-3px}
+.n{font-size:13px;font-weight:600;display:flex;justify-content:space-between}
+.week .cell{min-height:60vh}
+.chip{display:block;width:100%;text-align:left;margin-top:3px;padding:2px 6px;font-size:12.5px;line-height:1.35;border:0;border-left:3px solid var(--c,#8895A5);border-radius:5px;background:color-mix(in srgb,var(--c,#8895A5) 20%,var(--panel));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip.done{text-decoration:line-through;opacity:.6}
+.more{font-size:12px;color:var(--acc);background:none;border:0;padding:2px 4px}
+.list{margin:0 12px 24px}
+.list h3{margin:14px 0 4px;font-size:14px;color:var(--mute)}
+.row{display:flex;gap:10px;align-items:center;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--c,#8895A5);border-radius:8px;padding:8px 10px;margin-bottom:6px;width:100%;text-align:left}
+.empty{color:var(--mute);padding:24px;text-align:center}
+dialog{border:1px solid var(--line);border-radius:14px;background:var(--panel);color:var(--ink);padding:16px;width:min(560px,calc(100vw - 20px));max-height:92vh}
+dialog::backdrop{background:#0008}
+dialog h2{margin:0 0 10px;font-size:17px}
+label{display:block;font-size:13px;color:var(--mute);margin:10px 0 3px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.acts .sp{flex:1}
+.err{color:#C62828;font-size:13px;min-height:18px;margin-top:6px}
+.chk{display:flex;gap:8px;align-items:center;margin:10px 0 0;color:var(--ink);font-size:14px}.chk input{width:18px;height:18px}
+.day{background:var(--wk);border-radius:8px;padding:6px 8px;margin:8px 0}
+.day .row{margin:4px 0 0}
+@media(max-width:640px){.cell{min-height:64px;padding:2px}.chip{height:8px;padding:0;margin-top:2px;font-size:0;border-radius:4px}.chip.done{opacity:.4}.week .cell{min-height:50vh}.week .chip{height:auto;font-size:12px;padding:2px 4px}.top h1{font-size:16px}}
+@media(prefers-reduced-motion:no-preference){.cell{transition:background .15s}}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>ปฏิทินวางแผนงาน</h1>
+  <div class="seg" id="views" role="group" aria-label="มุมมอง"></div>
+  <button class="btn p" id="add">+ เพิ่มรายการ</button>
+  <button class="btn" id="catBtn">หมวดหมู่</button>
+  <button class="btn" id="menuBtn" aria-haspopup="dialog">ข้อมูล</button>
+</header>
+<div class="bar">
+  <button class="btn" id="prev" aria-label="ก่อนหน้า">‹</button>
+  <button class="btn" id="now">วันนี้</button>
+  <button class="btn" id="next" aria-label="ถัดไป">›</button>
+  <h2 id="title" aria-live="polite"></h2>
+  <input type="date" id="jump" aria-label="ไปยังวันที่ (ปีใดก็ได้)">
+  <input type="search" id="q" placeholder="ค้นหา" aria-label="ค้นหา" style="max-width:160px">
+</div>
+<div class="cats" id="cats"></div>
+<main id="main"></main>
+<dialog id="dlg"></dialog>
+<script>
+(function(){'use strict';
+const $=(s,r=document)=>r.querySelector(s);
+const h=(t,p,...k)=>{const e=document.createElement(t);for(const a in p||{}){const v=p[a];if(a==='class')e.className=v;else if(a.slice(0,2)==='on')e.addEventListener(a.slice(2),v);else if(v===true)e.setAttribute(a,'');else if(v!==false&&v!=null)e.setAttribute(a,v)}e.append(...k.flat(9).filter(x=>x!=null&&x!==false));return e};
+const TM=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'],TD=['อา','จ','อ','พ','พฤ','ศ','ส'],TDL=['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+const pad=n=>String(n).padStart(2,'0'),F=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()),P=s=>{const a=s.split('-');return new Date(+a[0],a[1]-1,+a[2])};
+const add=(s,n)=>{const d=P(s);d.setDate(d.getDate()+n);return F(d)},diff=(a,b)=>Math.round((P(b)-P(a))/864e5),today=()=>F(new Date());
+const fmt=(s,o)=>{const d=P(s);return(o&&o.wd?TDL[d.getDay()]+'ที่ ':'')+d.getDate()+' '+TM[d.getMonth()]+' '+(d.getFullYear()+543)};
+const uid=()=>'e'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const KEY='planner.v1';let warned=false;
+function seed(){const c=[{id:'c1',n:'กิจกรรม',c:'#2E9E6B'},{id:'c2',n:'ประชุม',c:'#1F6FEB'},{id:'c3',n:'งาน',c:'#E08A00'},{id:'c4',n:'QMR',c:'#C9A100'}];
+const q=['2026-10-16','2026-11-19','2026-12-24','2027-01-21','2027-02-18','2027-03-18','2027-04-29','2027-05-20','2027-06-17','2027-07-15','2027-08-26','2027-09-16'];
+return{cats:c,ev:q.map(d=>({id:uid(),t:'ประชุม QMR',d,e:d,s:'13:00',f:'16:00',al:0,c:'c4',p:'ห้อง CONFERENCE',w:'',note:'',dn:{},r:{u:'none',n:1,until:''}}))}}
+function load(){try{const j=JSON.parse(localStorage.getItem(KEY));if(j&&Array.isArray(j.ev)&&Array.isArray(j.cats))return j}catch(e){}return seed()}
+let S=load();const ui={v:'month',a:today(),q:'',off:new Set()};
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){if(!warned){warned=true;alert('เบราว์เซอร์นี้บันทึกอัตโนมัติไม่ได้ กด "ข้อมูล" > ส่งออก เพื่อสำรองก่อนปิดหน้า')}}render()}
+const cat=id=>S.cats.find(c=>c.id===id);
+/* ---- วนซ้ำ: คืนวันเริ่มของแต่ละครั้งที่ช่วงเวลาทับ [a,b] ---- */
+function occ(v,a,b){const L=diff(v.d,v.e||v.d),r=v.r||{u:'none'},out=[];
+if(r.u==='none'){if(v.d<=b&&add(v.d,L)>=a)out.push(v.d);return out}
+const n=Math.max(1,+r.n||1),o=P(v.d);
+for(let k=0;k<5000;k++){let s;
+if(r.u==='day')s=add(v.d,k*n);else if(r.u==='week')s=add(v.d,7*k*n);
+else{const y=r.u==='year'?o.getFullYear()+k*n:o.getFullYear(),m=r.u==='month'?o.getMonth()+k*n:o.getMonth();s=F(new Date(y,m,Math.min(o.getDate(),new Date(y,m+1,0).getDate())))}
+if(s>b||(r.until&&s>r.until))break;if(add(s,L)>=a)out.push(s)}
+return out}
+function range(a,b){const m=new Map(),q=ui.q.trim().toLowerCase();
+S.ev.forEach(v=>{if(ui.off.has(v.c||''))return;if(q&&![v.t,v.note,v.p,v.w].join(' ').toLowerCase().includes(q))return;
+const L=diff(v.d,v.e||v.d);occ(v,a,b).forEach(s=>{for(let i=0;i<=L;i++){const d=add(s,i);if(d<a||d>b)continue;(m.get(d)||m.set(d,[]).get(d)).push({v,s})}})});
+m.forEach(l=>l.sort((x,y)=>(x.v.al?'':x.v.s||'')<(y.v.al?'':y.v.s||'')?-1:1));return m}
+/* ---- ส่วนแสดงผล ---- */
+const tl=v=>v.al||!v.s?'':v.s+(v.f?'–'+v.f:'')+' ';
+function chip(x,wide){const v=x.v,c=cat(v.c),dn=v.dn&&v.dn[x.s];
+return h('button',{class:'chip'+(dn?' done':''),type:'button',draggable:true,style:'--c:'+(c?c.c:'#8895A5'),title:tl(v)+v.t+(c?' ('+c.n+')':''),
+onclick:e=>{e.stopPropagation();edit(v,null,x.s)},
+ondragstart:e=>{e.dataTransfer.setData('text/plain',v.id+'|'+x.s)}},tl(v)+v.t)}
+function cell(d,cls,max){const l=ui.m.get(d)||[],dt=P(d).getDay();
+const c=h('div',{class:'cell '+cls+(dt%6===0?' wk':'')+(d===today()?' today':''),tabindex:0,role:'gridcell','aria-label':fmt(d,{wd:1})+(l.length?' มี '+l.length+' รายการ':'')+' กดเพื่อเพิ่ม',
+onclick:()=>edit(null,d),onkeydown:e=>{if(e.key==='Enter'&&e.target===c)edit(null,d)},
+ondragover:e=>{e.preventDefault();c.classList.add('over')},ondragleave:()=>c.classList.remove('over'),
+ondrop:e=>{e.preventDefault();c.classList.remove('over');const[id,s]=(e.dataTransfer.getData('text/plain')||'|').split('|'),v=S.ev.find(z=>z.id===id);if(!v)return;const k=diff(s,d);if(!k)return;v.d=add(v.d,k);if(v.e)v.e=add(v.e,k);save()}},
+h('div',{class:'n'},h('span',null,P(d).getDate()),ui.v==='week'?h('span',{style:'color:var(--mute);font-weight:400'},TDL[dt]):null));
+l.slice(0,max).forEach(x=>c.append(chip(x)));
+if(l.length>max)c.append(h('button',{class:'more',type:'button',onclick:e=>{e.stopPropagation();ui.v='week';ui.a=d;render()}},'+'+(l.length-max)+' เพิ่มเติม'));
+return c}
+function render(){const main=$('#main');main.textContent='';const a=P(ui.a);let t;
+$('#jump').value=ui.a;
+$('#views').replaceChildren(...[['month','เดือน'],['week','สัปดาห์'],['list','รายการ']].map(([k,l])=>h('button',{class:'btn',type:'button','aria-pressed':String(ui.v===k),onclick:()=>{ui.v=k;render()}},l)));
+$('#cats').replaceChildren(...S.cats.map(c=>h('button',{class:'cat',type:'button',style:'--c:'+c.c,'aria-pressed':String(!ui.off.has(c.id)),onclick:()=>{ui.off.has(c.id)?ui.off.delete(c.id):ui.off.add(c.id);render()}},h('i'),c.n)));
+if(ui.v==='month'){const f=new Date(a.getFullYear(),a.getMonth(),1),s=F(new Date(f.getFullYear(),f.getMonth(),1-f.getDay())),e=add(s,41);
+t=TM[a.getMonth()]+' '+(a.getFullYear()+543);ui.m=range(s,e);
+const g=h('div',{class:'grid',role:'grid'},TD.map(x=>h('div',{class:'dow'},x)));
+for(let i=0;i<42;i++){const d=add(s,i);g.append(cell(d,P(d).getMonth()===a.getMonth()?'':'out',3))}main.append(g)}
+else if(ui.v==='week'){const s=add(ui.a,-a.getDay()),e=add(s,6);t=fmt(s)+' – '+fmt(e);ui.m=range(s,e);
+const g=h('div',{class:'grid week',role:'grid'},TD.map(x=>h('div',{class:'dow'},x)));for(let i=0;i<7;i++)g.append(cell(add(s,i),'',99));main.append(g)}
+else{const e=add(ui.a,89);t='ตั้งแต่ '+fmt(ui.a)+' (90 วัน)';const m=range(ui.a,e),box=h('div',{class:'list'});
+[...m.keys()].sort().forEach(d=>{box.append(h('h3',null,fmt(d,{wd:1})+(d===today()?' · วันนี้':'')),...m.get(d).map(x=>{const c=cat(x.v.c);
+return h('button',{class:'row',type:'button',style:'--c:'+(c?c.c:'#8895A5'),onclick:()=>edit(x.v,null,x.s)},h('span',{style:'flex:1'},h('b',null,(x.v.dn&&x.v.dn[x.s]?'✓ ':'')+x.v.t),h('div',{style:'font-size:13px;color:var(--mute)'},[tl(x.v)||'ทั้งวัน',x.v.p&&'📍'+x.v.p,x.v.w,c&&c.n].filter(Boolean).join(' · '))))}))});
+if(!m.size)box.append(h('div',{class:'empty'},'ไม่มีรายการในช่วงนี้ กด "+ เพิ่มรายการ" หรือกดวันที่ในมุมมองเดือน'));main.append(box)}
+$('#title').textContent=t}
+/* ---- ฟอร์มรายการ ---- */
+const dlg=$('#dlg');
+function edit(v,date,occStart){const isNew=!v,d0=date||(v&&v.d)||ui.a;
+v=v||{id:uid(),t:'',d:d0,e:d0,s:'',f:'',al:1,c:(S.cats[0]||{}).id||'',p:'',w:'',note:'',dn:{},r:{u:'none',n:1,until:''}};
+const f={};const I=(k,type,val,ph)=>f[k]=h('input',{type,value:val==null?'':val,placeholder:ph||''});
+I('t','text',v.t,'ชื่อรายการ เช่น อบรม / ประชุม / ส่งเอกสาร');I('d','date',v.d);I('e','date',v.e||v.d);I('s','time',v.s);I('f','time',v.f);I('p','text',v.p,'สถานที่');I('w','text',v.w,'ผู้รับผิดชอบ / ผู้เข้าร่วม');I('n','number',(v.r||{}).n||1);f.n.min=1;I('u','date',(v.r||{}).until);
+f.al=h('input',{type:'checkbox'});f.al.checked=!!v.al;
+f.c=h('select',null,h('option',{value:''},'ไม่ระบุหมวด'),S.cats.map(c=>h('option',{value:c.id,selected:c.id===v.c},c.n)));
+f.ru=h('select',null,[['none','ไม่ซ้ำ'],['day','ทุก ๆ วัน'],['week','ทุก ๆ สัปดาห์'],['month','ทุก ๆ เดือน'],['year','ทุก ๆ ปี']].map(([k,l])=>h('option',{value:k,selected:k===(v.r||{}).u},l)));
+f.note=h('textarea',{rows:3,placeholder:'รายละเอียด / วาระ / สิ่งที่ต้องเตรียม'},v.note||'');
+f.done=h('input',{type:'checkbox'});f.done.checked=!!(v.dn&&v.dn[occStart||v.d]);
+const err=h('div',{class:'err',role:'alert'}),times=h('div',{class:'two'},h('div',null,h('label',null,'เวลาเริ่ม'),f.s),h('div',null,h('label',null,'เวลาสิ้นสุด'),f.f)),rep=h('div',{class:'two'},h('div',null,h('label',null,'ทุก ๆ กี่ครั้ง'),f.n),h('div',null,h('label',null,'ซ้ำจนถึง (ว่าง = ไม่สิ้นสุด)'),f.u));
+const sync=()=>{times.hidden=f.al.checked;rep.hidden=f.ru.value==='none'};f.al.onchange=f.ru.onchange=sync;
+f.d.onchange=()=>{if(f.e.value<f.d.value)f.e.value=f.d.value};
+const same=isNew?(ui.m&&ui.m.get(d0)||range(d0,d0).get(d0)||[]):[];
+const body=()=>{const t=f.t.value.trim(),a=f.d.value,b=f.e.value||a;
+if(!t)return err.textContent='ใส่ชื่อรายการก่อน',f.t.focus();if(!a)return err.textContent='เลือกวันที่เริ่ม';if(b<a)return err.textContent='วันสิ้นสุดต้องไม่ก่อนวันเริ่ม';
+if(!f.al.checked&&f.s.value&&f.f.value&&a===b&&f.f.value<f.s.value)return err.textContent='เวลาสิ้นสุดต้องไม่ก่อนเวลาเริ่ม';
+Object.assign(v,{t,d:a,e:b,al:f.al.checked?1:0,s:f.al.checked?'':f.s.value,f:f.al.checked?'':f.f.value,c:f.c.value,p:f.p.value.trim(),w:f.w.value.trim(),note:f.note.value.trim(),r:{u:f.ru.value,n:Math.max(1,+f.n.value||1),until:f.u.value}});
+v.dn=v.dn||{};const k=occStart||v.d;if(f.done.checked)v.dn[k]=1;else delete v.dn[k];
+if(isNew)S.ev.push(v);dlg.close();save()};
+const close=()=>dlg.close();
+dlg.replaceChildren(h('h2',null,isNew?'เพิ่มรายการวันที่ '+fmt(d0):'แก้ไขรายการ'),
+same.length?h('div',{class:'day'},h('div',{style:'font-size:13px;color:var(--mute)'},'มีในวันนี้แล้ว (กดเพื่อแก้ไข)'),same.map(x=>h('button',{class:'row',type:'button',style:'--c:'+((cat(x.v.c)||{}).c||'#8895A5'),onclick:()=>{dlg.close();edit(x.v,null,x.s)}},tl(x.v)+x.v.t))):null,
+h('label',null,'ชื่อรายการ'),f.t,h('label',null,'หมวดหมู่'),f.c,
+h('div',{class:'two'},h('div',null,h('label',null,'วันที่เริ่ม'),f.d),h('div',null,h('label',null,'วันที่สิ้นสุด (หลายวันได้)'),f.e)),
+h('label',{class:'chk'},f.al,'ทั้งวัน'),times,
+h('label',null,'ทำซ้ำ'),f.ru,rep,
+h('label',null,'สถานที่'),f.p,h('label',null,'ผู้รับผิดชอบ / ผู้เข้าร่วม'),f.w,h('label',null,'รายละเอียด'),f.note,
+h('label',{class:'chk'},f.done,'ทำเสร็จแล้ว'+((v.r||{}).u&&v.r.u!=='none'?' (เฉพาะครั้งวันที่ '+fmt(occStart||v.d)+')':'')),
+(v.r||{}).u&&v.r.u!=='none'?h('div',{style:'font-size:12px;color:var(--mute);margin-top:6px'},'การแก้ไขวันที่/ข้อความมีผลกับทั้งชุดที่ซ้ำ'):null,err,
+h('div',{class:'acts'},h('button',{class:'btn p',type:'button',onclick:body},'บันทึก'),h('button',{class:'btn',type:'button',onclick:close},'ปิด'),h('span',{class:'sp'}),
+isNew?null:h('button',{class:'btn',type:'button',onclick:()=>{const c=JSON.parse(JSON.stringify(v));c.id=uid();c.dn={};c.t+=' (สำเนา)';S.ev.push(c);dlg.close();save()}},'ทำสำเนา'),
+isNew?null:h('button',{class:'btn d',type:'button',onclick:()=>{if(confirm('ลบ "'+v.t+'" ?'+((v.r||{}).u!=='none'?' (ลบทั้งชุดที่ซ้ำ)':''))){S.ev=S.ev.filter(z=>z.id!==v.id);dlg.close();save()}}},'ลบ')));
+sync();dlg.showModal();if(isNew)f.t.focus()}
+/* ---- หมวดหมู่ ---- */
+function cats(){const box=h('div');const draw=()=>{box.replaceChildren(...S.cats.map(c=>h('div',{class:'two',style:'grid-template-columns:44px 1fr auto;align-items:center;margin-top:8px'},
+h('input',{type:'color',value:c.c,style:'width:44px;height:40px;padding:2px',oninput:e=>{c.c=e.target.value;save()}}),
+h('input',{type:'text',value:c.n,oninput:e=>{c.n=e.target.value;save()}}),
+h('button',{class:'btn d',type:'button',onclick:()=>{if(confirm('ลบหมวด "'+c.n+'" ? (รายการในหมวดนี้จะกลายเป็นไม่ระบุหมวด)')){S.ev.forEach(v=>{if(v.c===c.id)v.c=''});S.cats=S.cats.filter(z=>z!==c);save();draw()}}},'ลบ'))))};draw();
+dlg.replaceChildren(h('h2',null,'หมวดหมู่ (สร้าง/เปลี่ยนชื่อ/เปลี่ยนสีได้อิสระ)'),box,
+h('div',{class:'acts'},h('button',{class:'btn p',type:'button',onclick:()=>{S.cats.push({id:'c'+uid(),n:'หมวดใหม่',c:'#7A5AF8'});save();draw()}},'+ เพิ่มหมวด'),h('span',{class:'sp'}),h('button',{class:'btn',type:'button',onclick:()=>dlg.close()},'เสร็จ')));dlg.showModal()}
+/* ---- ข้อมูล: ส่งออก/นำเข้า ---- */
+const dl=(name,txt,mime)=>{const a=h('a',{href:URL.createObjectURL(new Blob([txt],{type:mime})),download:name});document.body.append(a);a.click();a.remove()};
+function ics(){const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Planner//TH'],e=s=>String(s||'').replace(/\\/g,'\\\\').replace(/[,;]/g,'\\$&').replace(/\n/g,'\\n'),dd=s=>s.replace(/-/g,''),tt=t=>t.replace(':','')+'00',st=new Date().toISOString().replace(/[-:]/g,'').slice(0,15)+'Z';
+S.ev.forEach(v=>{L.push('BEGIN:VEVENT','UID:'+v.id+'@planner','DTSTAMP:'+st);
+if(v.al||!v.s)L.push('DTSTART;VALUE=DATE:'+dd(v.d),'DTEND;VALUE=DATE:'+dd(add(v.e||v.d,1)));else L.push('DTSTART:'+dd(v.d)+'T'+tt(v.s),'DTEND:'+dd(v.e||v.d)+'T'+tt(v.f||v.s));
+if(v.r&&v.r.u!=='none')L.push('RRULE:FREQ='+{day:'DAILY',week:'WEEKLY',month:'MONTHLY',year:'YEARLY'}[v.r.u]+';INTERVAL='+(v.r.n||1)+(v.r.until?';UNTIL='+dd(v.r.until):''));
+L.push('SUMMARY:'+e(v.t),'LOCATION:'+e(v.p),'DESCRIPTION:'+e(v.note),'END:VEVENT')});L.push('END:VCALENDAR');return L.join('\r\n')}
+function data(){const inp=h('input',{type:'file',accept:'.json,application/json',hidden:true,onchange:async e=>{try{const j=JSON.parse(await e.target.files[0].text());
+if(!j||!Array.isArray(j.ev)||!Array.isArray(j.cats))throw 0;if(!confirm('นำเข้าแทนที่ข้อมูลปัจจุบันทั้งหมด ('+j.ev.length+' รายการ) ?'))return;S=j;dlg.close();save()}catch(x){alert('ไฟล์ไม่ถูกต้อง ต้องเป็นไฟล์ JSON ที่ส่งออกจากหน้านี้')}}});
+dlg.replaceChildren(h('h2',null,'ข้อมูล'),h('p',{style:'color:var(--mute);font-size:13px'},'ข้อมูลเก็บในเบราว์เซอร์เครื่องนี้ (ไม่แชร์กับทีมในหน้านี้) กรุณาส่งออกสำรองเป็นระยะ'),
+h('div',{class:'acts'},h('button',{class:'btn',type:'button',onclick:()=>dl('planner-'+today()+'.json',JSON.stringify(S,null,1),'application/json')},'ส่งออก JSON (สำรอง)'),
+h('button',{class:'btn',type:'button',onclick:()=>dl('planner-'+today()+'.ics',ics(),'text/calendar')},'ส่งออก .ics (Google/Apple Calendar)'),
+h('button',{class:'btn',type:'button',onclick:()=>inp.click()},'นำเข้า JSON'),inp),
+h('div',{class:'acts'},h('a',{class:'btn',href:'legacy/index.html',style:'text-decoration:none'},'เปิดระบบเดิม (HA Round)'),h('span',{class:'sp'}),h('button',{class:'btn',type:'button',onclick:()=>dlg.close()},'ปิด')));dlg.showModal()}
+/* ---- เหตุการณ์หลัก ---- */
+const step=k=>{const a=P(ui.a);if(ui.v==='month')a.setMonth(a.getMonth()+k,1);else a.setDate(a.getDate()+k*(ui.v==='week'?7:30));ui.a=F(a);render()};
+$('#prev').onclick=()=>step(-1);$('#next').onclick=()=>step(1);$('#now').onclick=()=>{ui.a=today();render()};
+$('#jump').onchange=e=>{if(e.target.value){ui.a=e.target.value;render()}};
+$('#q').oninput=e=>{ui.q=e.target.value;render()};
+$('#add').onclick=()=>edit(null,ui.v==='month'&&P(ui.a).getMonth()!==P(today()).getMonth()?ui.a:(ui.a||today()));
+$('#catBtn').onclick=cats;$('#menuBtn').onclick=data;
+dlg.addEventListener('click',e=>{if(e.target===dlg)dlg.close()});
+render();
+})();
+</script>
+</body>
+</html>

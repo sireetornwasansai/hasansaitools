@@ -44,16 +44,11 @@ function setupSheet() {
   Logger.log('แท็บ: ' + Object.keys(SHEETS).join(', '));
 }
 
-/** ติดตั้งครั้งเดียวจบ: ชีต/โฟลเดอร์ + GAS_SECRET (สุ่มให้ถ้ายังไม่มี) */
+/** ติดตั้งครั้งเดียวจบ: ชีต/โฟลเดอร์ */
 function setupAll() {
   setupSheet();
-  var P = PropertiesService.getScriptProperties(), made = false;
-  if (!P.getProperty('GAS_SECRET')) {
-    P.setProperty('GAS_SECRET', (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, ''));
-    made = true;
-  }
   Logger.log('— — —');
-  Logger.log(made ? 'สร้าง GAS_SECRET ใหม่แล้ว ดูค่าได้ที่ Project Settings → Script properties → นำไปใส่ใน Vercel (Environment Variables: GAS_SECRET)' : 'GAS_SECRET มีอยู่แล้ว (ไม่เปลี่ยน)');
+  Logger.log('ไม่ต้องตั้ง GAS_SECRET แล้ว ใครก็ใช้งานได้ผ่านลิงก์แอป');
   Logger.log('ขั้นต่อไป: Deploy → New deployment → Web app (Execute as: Me, Who has access: Anyone) แล้วนำลิงก์ /exec ไปใส่ GAS_URL ใน Vercel');
   showSetupStatus();
 }
@@ -62,7 +57,6 @@ function setupAll() {
 function showSetupStatus() {
   var P = PropertiesService.getScriptProperties(), out = [];
   function chk(ok, okMsg, badMsg) { out.push((ok ? '✔ ' : '✘ ') + (ok ? okMsg : badMsg)); }
-  chk(!!P.getProperty('GAS_SECRET'), 'GAS_SECRET ตั้งแล้ว (อย่าลืมใส่ค่าเดียวกันใน Vercel)', 'ยังไม่มี GAS_SECRET → รัน setupAll');
   try { var ss = openSS_(); chk(true, 'ชีต: ' + ss.getName() + ' (' + Object.keys(SHEETS).filter(function (n) { return ss.getSheetByName(n); }).length + '/' + Object.keys(SHEETS).length + ' แท็บ)', ''); }
   catch (e) { chk(false, '', 'เปิดชีตไม่ได้ → รัน setupSheet (' + e.message + ')'); }
   var fid = P.getProperty('FOLDER_ID');

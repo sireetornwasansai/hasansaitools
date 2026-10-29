@@ -1,13 +1,14 @@
 /**
  * HA Round — Apps Script backend
  * ตั้งค่า: Project Settings → Script properties
- *   TEAM_KEY    = รหัสผ่านทีม
  *   GAS_SECRET  = สตริงยาว ๆ สุ่ม (ต้องตรงกับ GAS_SECRET ใน Vercel)
  * ชีตสร้างให้อัตโนมัติ: Issues | Dates | Hait | Files | Log
+ *   SHEET_ID = ไอดีชีตที่ใช้เก็บข้อมูล (แนะนำให้ตั้งเสมอ กันไปใช้ชีตเก่าที่สคริปต์ผูกอยู่)
  *   FOLDER_ID (ไม่บังคับ) = ไอดีโฟลเดอร์ Google Drive ที่จะเก็บไฟล์ ถ้าไม่ใส่จะสร้าง HA-Round-Files ให้
  *   SHARE_MODE (ไม่บังคับ) = private (ค่าเริ่มต้น) | domain | link
  *   MEMO_* (ไม่บังคับ) = ตั้งค่าบันทึกข้อความ ดูหัวข้อ "บันทึกข้อความ" ด้านล่าง
  * ทุก request เป็น POST (text/plain JSON) ผ่าน proxy /api/gas เท่านั้น
+ * ไม่มีรหัสผ่านผู้ใช้: ใครเปิดลิงก์แอปได้ก็อ่าน/เขียนได้ (GAS_SECRET กันเฉพาะการยิงตรงเข้า /exec ข้าม Vercel)
  */
 var SHEETS = {
   Issues: ['id', 'no', 'deleted', 'updatedAt', 'updatedBy', 'json', 'files'],
@@ -15,33 +16,25 @@ var SHEETS = {
   Hait: ['k', 'json'],
   Files: ['id', 'deleted', 'uploadedAt', 'name', 'cat', 'ref', 'note', 'size', 'url', 'driveId', 'by', 'updatedAt', 'mime', 'issue'],
   Log: ['ts', 'user', 'action', 'target', 'diff'],
-  Memos: ['id', 'deleted', 'createdAt', 'docNo', 'subject', 'docId', 'pdfId', 'docxId', 'by', 'updatedAt', 'meeting', 'json']
+  Memos: ['id', 'deleted', 'createdAt', 'docNo', 'subject', 'docId', 'pdfId', 'docxId', 'by', 'updatedAt', 'meeting', 'json'],
+  Uploads: ['ts', 'user', 'name', 'cat', 'size', 'mime', 'fileUrl', 'folderUrl', 'fileId', 'issue']   // บันทึกการอัปโหลดทุกครั้ง (ไม่ถูกลบเมื่อลบไฟล์)
 };
 var FILE_MAX = 20 * 1024 * 1024;     // ขนาดสูงสุดต่อไฟล์ (ไบต์)
 var BAD_EXT = /\.(exe|bat|cmd|com|scr|msi|js|vbs|ps1|sh|jar|apk|dll|lnk)$/i;
 var NESTED = ['round', 'backup', 'aft', 'aftStatus'];
 function toIso_(v) { return v instanceof Date ? v.toISOString() : String(v || ''); }
 
-var ROLE_ = '';
-function roleOf_(key) {
-  var P = PropertiesService.getScriptProperties();
-  if (key && key === P.getProperty('TEAM_KEY')) return 'editor';
-  if (key && P.getProperty('VIEW_KEY') && key === P.getProperty('VIEW_KEY')) return 'viewer';
-  return '';
-}
+var ROLE_ = 'editor';   // ไม่มีระบบรหัสทีมแล้ว: ทุกคนที่เข้าผ่านแอปมีสิทธิ์แก้ไข
 function doGet() { return out_({ ok: false, error: 'use_post' }); }
 
 function doPost(e) {
   var b;
   try { b = JSON.parse(e.postData.contents); } catch (err) { return out_({ ok: false, error: 'bad_request' }); }
   var P = PropertiesService.getScriptProperties();
-  if (!P.getProperty('GAS_SECRET') || b.secret !== P.getProperty('GAS_SECRET')) return out_({ ok: false, error: 'unauthorized' });
-  ROLE_ = roleOf_(b.key);
-  if (!ROLE_) return out_({ ok: false, error: 'unauthorized' });
+  /* ไม่ตรวจรหัสลับ: ทุกคนที่เข้าผ่านแอปใช้งานได้ทุกฟังก์ชัน */
   var lock = LockService.getScriptLock();
   var isRead = (b.action === 'ver' || b.action === 'snapshot' || b.action === 'memoGet');
   var extra = null;
-  if (!isRead && ROLE_ !== 'editor') return out_({ ok: false, error: 'forbidden' });
   if (!isRead && !lock.tryLock(20000)) return out_({ ok: false, error: 'busy' });
   try {
     var who = String(b.by || '').slice(0, 80);
@@ -74,8 +67,16 @@ function doPost(e) {
 
 /* ---------- helpers ---------- */
 function out_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
+/** ชีตที่ระบบใช้: ถ้าตั้ง Script property SHEET_ID จะใช้ชีตนั้นเสมอ (ไม่ใช้ชีตที่สคริปต์ผูกอยู่) ไม่ตั้ง = ใช้ชีตที่ผูกกับสคริปต์ */
+function openSS_() {
+  var id = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
+  if (id) return SpreadsheetApp.openById(id);
+  var a = SpreadsheetApp.getActiveSpreadsheet();
+  if (!a) throw new Error('no_sheet');
+  return a;
+}
 function sh_(name) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet() || SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty('SHEET_ID'));
+  var ss = openSS_();
   var s = ss.getSheetByName(name);
   if (!s) { s = ss.insertSheet(name); s.appendRow(SHEETS[name]); s.setFrozenRows(1); }
   else if (s.getLastColumn() < SHEETS[name].length && s.getLastRow() >= 1) {   // เพิ่มคอลัมน์ใหม่ในชีตเดิม
@@ -201,6 +202,8 @@ function fileChunk_(b, who) {
   var id = 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), now = new Date().toISOString();
   var issue = String(b.issue || '').slice(0, 40);
   sh_('Files').appendRow([id, false, now, name, cat, String(b.ref || '').slice(0, 120), String(b.note || '').slice(0, 500), bytes.length, f.getUrl(), f.getId(), who, now, blob.getContentType(), issue]);
+  var folderUrl = ''; try { folderUrl = f.getParents().next().getUrl(); } catch (e) {}
+  sh_('Uploads').appendRow([now, who, name, cat, bytes.length, blob.getContentType(), f.getUrl(), folderUrl, f.getId(), issue]);
   if (issue) syncIssueFiles_(issue);
   log_(who, 'file-upload', id, name + ' (' + bytes.length + ' B)');
   return { done: true, id: id };
@@ -264,6 +267,7 @@ function patchDates_(patch, who) {
 }
 function setHait_(kind, key, val, who) {
   if (kind !== 'cat' && kind !== 'plus') throw new Error('bad');
+  if (JSON.stringify(val).length > 20000) throw new Error('too_large');   // กันค่าใหญ่ผิดปกติ (งานรายวัน/หมายเหตุ)
   var s = sh_('Hait'), k = kind + '|' + key, data = rows_('Hait'), row = 0;
   data.forEach(function (r, i) { if (r[0] === k) row = i + 2; });
   if (row) s.getRange(row, 2).setValue(JSON.stringify(val)); else s.appendRow([k, JSON.stringify(val)]);
@@ -578,7 +582,7 @@ function cleanTmp_() {
 }
 function weeklyBackup() {
   cleanTmp_();
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = openSS_();
   ss.copy('HA-Round backup ' + Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd'));
 }
 
@@ -601,7 +605,7 @@ function setupDailyDigest() { ScriptApp.newTrigger('overdueDigest').timeBased().
 /* ---------- ย้ายข้อมูลจากชีตเก่า: ใส่ชื่อชีตเก่าที่มีแถวหัวคอลัมน์ id,no,by,... แล้วรันครั้งเดียว ---------- */
 function migrateFromLegacy(sheetName) {
   ROLE_ = 'editor';
-  var src = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName || 'Issues_old');
+  var src = openSS_().getSheetByName(sheetName || 'Issues_old');
   if (!src) throw new Error('ไม่พบชีต ' + (sheetName || 'Issues_old'));
   var v = src.getDataRange().getValues(), head = v.shift(), n = 0;
   v.forEach(function (r) {

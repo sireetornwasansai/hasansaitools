@@ -1,6 +1,37 @@
+> **อัปเดต: ไม่มีรหัส/สิทธิ์แล้ว** ใครเปิดลิงก์แอปก็ใช้ได้ทุกฟังก์ชัน · ไม่ต้องตั้ง `GAS_SECRET` อีก (Vercel ต้องตั้งแค่ `GAS_URL` = ลิงก์ `/exec`)
+> ขั้นตอน: วาง `gas/` ใน Apps Script → รัน `setupAll` → Deploy Web app (Execute as: Me, Who has access: Anyone) → ใส่ `GAS_URL` ใน Vercel → Redeploy
+> แก้ `Code.gs` แล้วต้อง Deploy → Manage deployments → Edit → **New version** บน deployment เดิม
+> ทดสอบอัตโนมัติ: cd tests && npm i && npm test (จำลอง Google Sheets/Apps Script ในเครื่อง ไม่ต้องใช้บัญชี Google) · GAS_SECRET ใน Vercel ไม่บังคับ (ถ้ายังตั้งไว้ proxy จะส่งต่อให้ Code.gs ตัวเก่า)
+> ปฏิทินแบบอิสระ (เบราว์เซอร์เครื่องเดียว) อยู่ที่ `/planner.html`
+
 # HA Round — แผน HA / HAIT / Hospital Round (รพ.สันทราย จ.เชียงใหม่)
 
 Frontend: GitHub → Vercel (static) · Proxy: `/api/gas` · Backend: Google Apps Script + Google Sheets
+
+## เริ่มต้นเร็ว (3 ขั้นตอน)
+1. **Apps Script** — วางไฟล์ในโฟลเดอร์ `gas/` ทั้งหมด (`Code.gs`, `Setup.gs`, `Reset.gs`, `appsscript.json`) → เปิด `Setup.gs` แก้ลิงก์ชีต/โฟลเดอร์ด้านบน → เลือกฟังก์ชัน **`setupAll`** กด Run ครั้งเดียว
+   ทำให้: เชื่อมชีต+โฟลเดอร์ · สร้างแท็บให้ครบ · สุ่ม `GAS_SECRET` ให้ · ตรวจความพร้อมแสดงใน Execution log (✔/✘)
+2. **Deploy** — Deploy → New deployment → Web app (Execute as: **Me**, Who has access: **Anyone**) → คัดลอกลิงก์ `/exec`
+3. **Vercel** — Environment Variables: `GAS_URL` = ลิงก์ `/exec`, `GAS_SECRET` = ค่าใน Script properties → Redeploy
+
+เปิดเว็บ → ใช้งานได้ทันที (ไม่มีรหัสผ่าน · ชื่อผู้บันทึกถามครั้งเดียวตอนบันทึกครั้งแรก)
+
+## การเข้าใช้งาน (ไม่มีรหัสผ่านทีมแล้ว)
+- ใครเปิดลิงก์แอปได้ก็เห็นและแก้ข้อมูลชุดเดียวกัน → **ส่งลิงก์ให้เฉพาะคนในทีม** และอย่าโพสต์ลิงก์สาธารณะ
+- `GAS_SECRET` ยังต้องมี: เป็นกุญแจระหว่าง Vercel กับ Apps Script เพื่อกันคนยิงตรงเข้าลิงก์ `/exec` (ผู้ใช้ไม่ต้องกรอก)
+- ตัวกันพลาด: ลบแบบ soft delete · แท็บ `Log` บันทึกทุกการแก้ · เปิดสำรองรายสัปดาห์ด้วย `setupWeeklyBackup`
+- เคยตั้ง `TEAM_KEY` / `VIEW_KEY` ไว้ใน Script properties: ลบทิ้งได้ (ระบบไม่อ่านแล้ว)
+
+## แก้ปัญหาที่พบบ่อย
+| อาการ | วิธีแก้ |
+|---|---|
+| ขึ้น "ระบบหลังบ้านปฏิเสธคำขอ" | `GAS_SECRET` ใน Vercel ไม่ตรงกับ Script properties · รัน `showSetupStatus` ดู ✔/✘ · แก้แล้ว Redeploy Vercel |
+| ขึ้น "เชื่อมต่อไม่ได้" / "ไม่ใช่ข้อมูลของแอป" | Deploy เป็น Web app สิทธิ์ **Anyone** · `GAS_URL` ต้องลงท้าย `/exec` · แก้ Code.gs แล้วต้อง Deploy → Manage deployments → Edit → New version |
+| สร้างบันทึกข้อความไม่ได้ | ใช้ `appsscript.json` ฉบับใหม่ (มีสิทธิ์ Docs) แล้วรันฟังก์ชันใดก็ได้หนึ่งครั้งเพื่อกดอนุญาตสิทธิ์ใหม่ |
+| หน้าแรกบอก "ยังไม่มีรอบ round ในแผน" | `public/data/plan.json` คีย์ `sessions` ว่างอยู่ ต้องเพิ่มรอบ (ระบบยังบันทึกประเด็นได้ตามปกติ) |
+| อยากเริ่มข้อมูลใหม่ | รัน `resetAllData` ใน `Reset.gs` (สำรองชีตให้ก่อนล้างอัตโนมัติ) |
+
+> หมายเหตุโครงสร้าง: ไฟล์ `api/app.js` ที่ซ้ำกับ `public/js/app.js` ถูกลบแล้ว (Vercel จะมองไฟล์ใน `api/` เป็น serverless function) เหลือเฉพาะ `api/gas.js`
 
 ## โครงสร้าง
 - `public/` หน้าเว็บ (index.html, css/app.css, js/app.js, data/plan.json, manifest.webmanifest, icons/)
@@ -18,16 +49,19 @@ Frontend: GitHub → Vercel (static) · Proxy: `/api/gas` · Backend: Google App
   - ตั้งค่าเพิ่มใน Script properties (ไม่บังคับ): `MEMO_DOCNO_PREFIX` (เช่น `ชม 0033.301/`) · `MEMO_TEMPLATE_ID` (Google Docs ต้นแบบที่ใช้ `{{DOC_NO}} {{DOC_DATE}} {{FROM}} {{TO}} {{SUBJECT}} {{ATTACH}} {{CONTENT}} {{NAME}} {{POSITION}} {{CONTACT}}` ไม่ใส่ = ใช้รูปแบบมาตรฐานของระบบ) · `MEMO_LOGO_ID` (ไอดีไฟล์ภาพครุฑใน Drive) · `MEMO_FONT` (ค่าเริ่มต้น Sarabun)
   - **หลังอัปเดต `Code.gs`**: รันฟังก์ชันใดก็ได้ใน Apps Script หนึ่งครั้งเพื่อกดอนุญาตสิทธิ์ใหม่ (Docs + เชื่อมต่อภายนอก) แล้ว Deploy เวอร์ชันใหม่บน deployment เดิม และ Redeploy Vercel (ต้องใช้ `api/gas.js` และ `vercel.json` ตัวใหม่)
 
+- **วันประชุม QMR ปีงบ 2570 (ใหม่)**: ปฏิทินแสดงวงกลมเหลือง "QMR" ครบ 12 ครั้ง (16 ต.ค. 69, 19 พ.ย., 24 ธ.ค., 21 ม.ค., 18 ก.พ., 18 มี.ค., 29 เม.ย., 20 พ.ค., 17 มิ.ย., 15 ก.ค., 26 ส.ค., 16 ก.ย. 70 ห้อง CONFERENCE ช่วงบ่าย) · ค่าตั้งต้นอยู่ใน `public/data/plan.json` คีย์ `qmr` · แท็บ "ประชุม" → ปุ่ม "กำหนดวันประชุม": เปลี่ยนวัน/เวลา/สถานที่ ยกเลิก-คืนการประชุม เพิ่มครั้งพิเศษ ใช้ค่าตั้งต้น (เตือนเมื่อตรงวันหยุด เสาร์-อาทิตย์ หรือชนกิจกรรมบ่าย; ต้องอยู่ในปีงบ 2570) · ที่แก้ไว้เก็บในชีตช่อง plus คีย์ `qmr:ID` ไม่ต้องแก้ GAS แค่ Redeploy Vercel · ปุ่ม "สร้างรายงานการประชุมของวันนี้" เติมวัน/สถานที่ให้
+
+- **กำหนดการรายวัน (ใหม่)**: กดวันที่ใดก็ได้ในปฏิทิน → หน้าต่างป๊อปอัพ "กำหนดการของวันนี้" แสดงกิจกรรมตามแผนของวันนั้น (round/สำรอง/บ่าย/QMR/HAIT) พร้อมปุ่มลัด และให้เพิ่มรายการได้ 3 ประเภท: **กิจกรรม / ประชุม / งาน** (ชื่อ เวลาเริ่ม-สิ้นสุด สถานที่ ผู้เข้าร่วม/ผู้รับผิดชอบ รายละเอียด) · ติ๊กเสร็จ แก้ไข ลบได้ · ช่องวันที่ที่มีรายการมีป้ายตัวเลข (✓ = เสร็จหมด) · ใต้ปฏิทินมีรายการของเดือน · เก็บในชีตช่อง plus คีย์ `task:ID` (หนึ่งรายการต่อหนึ่งคีย์ ไม่ทับกันเมื่อหลายคนแก้พร้อมกัน) ไม่ต้องแก้ GAS ส่วนนี้
+
 - **ใช้ได้ทุกอุปกรณ์ (UX v3)**: มือถือ = เมนูล่างมีไอคอน, หน้าต่างเลื่อนขึ้นจากล่างพร้อมปุ่มบันทึกติดขอบล่าง, รองรับรอยบากจอ/แนวนอน · แท็บเล็ต = หน้าต่างกลางจอ, การ์ดสองคอลัมน์ · เดสก์ท็อป (กว้าง ≥1024px) = แถบเมนูด้านข้าง, ปฏิทินซ้าย-กิจกรรมขวา, การ์ดหลายคอลัมน์ · ปุ่มสัมผัส ≥44px, ฟอร์มไม่ซูมเองบน iOS, โหมดมืด/คอนทราสต์สูง/ลดการเคลื่อนไหว · ตัวอย่างบันทึกข้อความย่อให้พอดีทุกขนาดจอ · ติดตั้งเป็นแอปบนหน้าจอหลักได้ (PWA: `manifest.webmanifest`, `icons/`) · ฟอนต์ IBM Plex Sans Thai / Sarabun โหลดแบบไม่บล็อกหน้า
 - ความเร็ว/การตอบสนอง: หน้าโหลดแผนพร้อมกับสคริปต์ (preload) มีหน้า Loading และปุ่มลองใหม่ · แถบความคืบหน้าด้านบนทุกครั้งที่คุยกับเซิร์ฟเวอร์ · ปุ่มที่บันทึกแสดงวงหมุนและกดซ้ำไม่ได้ระหว่างรอ · timeout 25 วินาที (ไฟล์ 90 วินาที) ไม่ให้ค้าง · แสดง skeleton ระหว่างรอข้อมูลทีมครั้งแรก · รองรับ prefers-reduced-motion
 
 ## ติดตั้ง (ทำครั้งเดียว)
 1. สร้าง Google Sheet ใหม่ → Extensions → Apps Script → วาง `gas/Code.gs` (และ appsscript.json ถ้าเปิด manifest)
-2. Project Settings → Script properties เพิ่ม `TEAM_KEY` (รหัสผ่านทีม) และ `GAS_SECRET` (สตริงสุ่มยาว ๆ)
+2. (ทำโดย `setupAll` อัตโนมัติ) Script properties: `GAS_SECRET` (สตริงสุ่มยาว ๆ), `SHEET_ID`, `FOLDER_ID`
 3. Deploy → New deployment → Web app → Execute as: Me, Who has access: Anyone → คัดลอกลิงก์ `/exec`
 4. Push โปรเจกต์ขึ้น GitHub → Import เข้า Vercel
 5. Vercel → Settings → Environment Variables: `GAS_URL` = ลิงก์ `/exec`, `GAS_SECRET` = ค่าเดียวกับในข้อ 2 → Redeploy
-6. (ไม่บังคับ) สิทธิ์ดูอย่างเดียว: เพิ่ม Script property `VIEW_KEY` — คนที่ใช้รหัสนี้จะเห็นข้อมูลแต่แก้ไม่ได้ (ให้ผู้บริหารใช้)
 7. (ไม่บังคับ) แจ้งเตือนเกินกำหนด: เพิ่ม `NOTIFY_EMAILS` (คั่นด้วย ,) แล้วรัน `setupDailyDigest` — ส่งอีเมลทุกวัน 08:00
 8. (ไม่บังคับ) ย้ายข้อมูลเก่า: เปลี่ยนชื่อชีตเก่าเป็น `Issues_old` แล้วรัน `migrateFromLegacy`
 9. (ไม่บังคับ) ไฟล์แนบบน Google Drive: เพิ่ม `FOLDER_ID` (ไอดีโฟลเดอร์ Drive ที่ต้องการ ถ้าไม่ใส่ระบบสร้าง `HA-Round-Files` ให้) และ `SHARE_MODE` = `private` (ค่าเริ่มต้น: แชร์โฟลเดอร์ให้ทีมเอง) | `domain` | `link` — ครั้งแรกที่ Deploy ต้องกดอนุญาตสิทธิ์ Drive

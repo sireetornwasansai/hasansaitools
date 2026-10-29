@@ -340,3 +340,62 @@ input:focus,select:focus,textarea:focus{border-color:var(--pri)!important;box-sh
 .pvframe{width:100%;height:68vh;height:68dvh;border:1px solid var(--line);border-radius:10px;background:#fff;display:block}
 .pvimg{max-width:100%;max-height:68vh;max-height:68dvh;display:block;margin:0 auto;border-radius:8px}
 @media print{.mtg-att .atts{display:none}.mtg-att .lk{display:none}}
+
+/* ===== UX v4: ฟอร์มและปุ่มใช้ง่ายขึ้น · หน้าเข้าร่วมทีม · ป้ายสถานะการเชื่อมต่อ ===== */
+.btn{min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn.sm{min-height:38px}
+.btn.lg{flex:1 1 200px;font-size:17px;font-weight:600;padding:11px 18px}
+.btn:disabled,.btn[aria-busy="true"]{opacity:.65;cursor:progress}
+input[type=text],input[type=password],input[type=date],select,textarea{width:100%;min-height:44px;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 11px;font-size:16px}
+input[type=text]:focus,input[type=password]:focus,input[type=date]:focus,select:focus,textarea:focus{outline:none;border-color:var(--focus);box-shadow:0 0 0 3px rgba(11,99,206,.22)}
+::placeholder{color:var(--ink-2);opacity:.75}
+
+/* หน้าเข้าร่วมทีม */
+.infobox{background:var(--survey-soft);color:var(--ink);border-left:4px solid var(--survey);border-radius:9px;padding:9px 12px;font-size:14.5px;margin:6px 0 4px}
+
+/* ป้ายสถานะการเชื่อมต่อ: จุดสีบอกสถานะ มองปราดเดียวรู้ */
+.mode{display:inline-flex;align-items:center;gap:7px;margin-top:8px!important;padding:4px 12px 4px 10px;border-radius:999px;background:var(--round-soft);border:1px solid transparent}
+.mode::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--round);flex:0 0 auto}
+.mode.ro{background:var(--alert-soft)} .mode.ro::before{background:var(--alert)}
+.mode.sync::before{animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){ .mode.sync::before{animation:none} }
+
+/* แถบเมนูล่าง: ตัวหนังสืออ่านง่ายขึ้นบนมือถือ */
+.tab{min-height:48px}
+.tab[aria-selected="true"]{font-weight:600}
+/* มือถือ: ลดความสูงส่วนหัว ให้เห็นปฏิทินเร็วขึ้น (ชื่อผู้จัดทำยังแสดงบนจอใหญ่) */
+@media (max-width:639px){ .top{padding-top:10px} .top h1{font-size:18px;line-height:1.3} .top p.role{display:none} }
+
+
+/* ประชุม QMR (วงกลมเหลืองตามปฏิทินปีงบ 2570) */
+:root{--qmr:#F2CF5B;--qmr-ink:#4D3B00;--qmr-ring:#B8901A}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--qmr:#D9B43A;--qmr-ink:#201800;--qmr-ring:#F0D77A}}
+:root[data-theme="dark"]{--qmr:#D9B43A;--qmr-ink:#201800;--qmr-ring:#F0D77A}
+.day.qmr{background:radial-gradient(circle 17px at 50% 17px,var(--qmr) 0 96%,transparent 100%) no-repeat var(--card);color:var(--qmr-ink);font-weight:700}
+.day.qmr .lb{color:var(--ink)}
+.day .qm{position:absolute;bottom:3px;right:5px;width:10px;height:10px;border-radius:50%;background:var(--qmr);box-shadow:0 0 0 1px var(--qmr-ring)}
+.ev.qmr{border-left-color:var(--qmr-ring)}
+.ev.qmr.off{opacity:.62}
+.ev.qmr.off .t{text-decoration:line-through}
+@media (prefers-contrast:more){.day.qmr{border-color:var(--qmr-ring)}}
+
+
+/* งานรายวัน */
+:root{--task:#C2185B}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--task:#F06292}}
+:root[data-theme="dark"]{--task:#F06292}
+.day .tkn{position:absolute;top:3px;left:4px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--task);color:#fff;font-size:10.5px;line-height:16px;font-weight:600;text-align:center;box-shadow:0 0 0 1px rgba(255,255,255,.7)}
+.ev.task{border-left-color:var(--task)}
+.ev.task.done{opacity:.6}
+.ev.task.done .t{text-decoration:line-through}
+input[type=time]{width:100%;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 10px}
+.tk-check{display:flex;gap:10px;align-items:flex-start;margin:0;font-size:16px;font-weight:500}
+.tk-check input{flex:0 0 auto;width:22px;height:22px;margin:2px 0 0}
+.taskrow{margin:0 0 8px}
+.taskrow.done .tt{text-decoration:line-through;color:var(--ink-2)}
+.taskrow .nt{white-space:pre-wrap;margin:4px 0 0 32px}
+.taskrow .muted{margin:2px 0 0 32px}
+
+.tk-sub{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin:4px 0 0 32px}
+.sheet .chips{margin:0 0 4px}

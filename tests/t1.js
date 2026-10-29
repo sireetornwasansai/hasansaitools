@@ -1,0 +1,22 @@
+const mk=require('./gasmock'),G=mk(require('path').resolve(__dirname,'..'));
+let pass=0,fail=0;const ok=(c,m)=>{c?pass++:(fail++,console.log('FAIL',m));if(c)console.log('ok  ',m)};
+(async()=>{
+ ok((await G.get()).error==='use_post','doGet -> use_post');
+ let r=await G.post({action:'ver'});ok(r.ok&&r.ver===0&&r.role==='editor','ver (ไม่ต้องมี secret) '+JSON.stringify(r));
+ r=await G.post({action:'snapshot'});ok(r.ok&&Array.isArray(r.issues)&&r.hait&&r.dates,'snapshot ว่าง');
+ const iss={id:'P001',no:1,found:'2026-10-29',round:'',unit:'ER',std:'II-6',text:'ทดสอบ',type:'ทั่วไป',risk:'กลาง',owner:'x',due:'',status:'เปิด',recheck:'',evidence:'',note:'',work:'HA'};
+ r=await G.post({action:'put',issue:iss,by:'tester'});ok(r.ok&&r.issues.length===1,'put issue '+(r.error||''));
+ const id=r.issues[0].id;
+ r=await G.post({action:'patch',id,patch:{status:'ปิด'},by:'t'});ok(r.ok&&r.issues[0].status==='ปิด','patch issue '+(r.error||''));
+ r=await G.post({action:'dates',patch:{survey:'2027-05-10',round:{R1:'2026-11-05'}},by:'t'});ok(r.ok&&r.dates.survey==='2027-05-10'&&r.dates.round.R1==='2026-11-05','dates '+(r.error||''));
+ r=await G.post({action:'hait',kind:'plus',key2:'task:abc',val:{k:'activity',d:'2026-10-30',t:'งานทดสอบ'},by:'t'});ok(r.ok&&r.hait.plus['task:abc'].t==='งานทดสอบ','hait plus task '+(r.error||''));
+ r=await G.post({action:'hait',kind:'plus',key2:'task:abc',val:{k:'task',d:'2026-10-30',t:'แก้แล้ว',done:1},by:'t'});ok(r.ok&&r.hait.plus['task:abc'].t==='แก้แล้ว','hait update same key');
+ r=await G.post({action:'hait',kind:'cat',key2:'k',val:{a:1}});ok(r.ok&&r.hait.cat.k.a===1,'hait cat');
+ r=await G.post({action:'hait',kind:'bogus',key2:'k',val:1});ok(!r.ok,'hait kind ผิด -> ปฏิเสธ '+r.error);
+ r=await G.post({action:'delete',id,by:'t'});ok(r.ok&&r.issues.length===0,'delete issue (soft) '+(r.error||''));
+ r=await G.post({action:'nope'});ok(r.error==='bad_action','action ไม่รู้จัก');
+ r=await G.post({action:'ver'});ok(r.ver>=6,'ver เพิ่มตามการเขียน = '+r.ver);
+ r=await G.post({action:'memoGet',id:'none'});console.log('memoGet missing ->',JSON.stringify(r).slice(0,120));
+ console.log('\nsheets:',Object.keys(G.sheets).join(','));
+ console.log(pass+' pass, '+fail+' fail');process.exit(fail?1:0);
+})().catch(e=>{console.log('CRASH',e);process.exit(2)});

@@ -1,0 +1,1 @@
+{"name":"ha-round-tests","private":true,"scripts":{"test":"node t1.js && node t2.js && node e2e.js && node e2e2.js && node e2e3.js"},"devDependencies":{"jsdom":"^24.0.0"}}
