@@ -396,3 +396,6 @@ input[type=time]{width:100%;border:1px solid var(--line);background:var(--card);
 .taskrow.done .tt{text-decoration:line-through;color:var(--ink-2)}
 .taskrow .nt{white-space:pre-wrap;margin:4px 0 0 32px}
 .taskrow .muted{margin:2px 0 0 32px}
+
+.tk-sub{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin:4px 0 0 32px}
+.sheet .chips{margin:0 0 4px}
