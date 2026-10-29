@@ -1,7 +1,6 @@
 /**
  * HA Round — Apps Script backend
  * ตั้งค่า: Project Settings → Script properties
- *   TEAM_KEY    = รหัสผ่านทีม
  *   GAS_SECRET  = สตริงยาว ๆ สุ่ม (ต้องตรงกับ GAS_SECRET ใน Vercel)
  * ชีตสร้างให้อัตโนมัติ: Issues | Dates | Hait | Files | Log
  *   SHEET_ID = ไอดีชีตที่ใช้เก็บข้อมูล (แนะนำให้ตั้งเสมอ กันไปใช้ชีตเก่าที่สคริปต์ผูกอยู่)
@@ -9,6 +8,7 @@
  *   SHARE_MODE (ไม่บังคับ) = private (ค่าเริ่มต้น) | domain | link
  *   MEMO_* (ไม่บังคับ) = ตั้งค่าบันทึกข้อความ ดูหัวข้อ "บันทึกข้อความ" ด้านล่าง
  * ทุก request เป็น POST (text/plain JSON) ผ่าน proxy /api/gas เท่านั้น
+ * ไม่มีรหัสผ่านผู้ใช้: ใครเปิดลิงก์แอปได้ก็อ่าน/เขียนได้ (GAS_SECRET กันเฉพาะการยิงตรงเข้า /exec ข้าม Vercel)
  */
 var SHEETS = {
   Issues: ['id', 'no', 'deleted', 'updatedAt', 'updatedBy', 'json', 'files'],
@@ -24,13 +24,7 @@ var BAD_EXT = /\.(exe|bat|cmd|com|scr|msi|js|vbs|ps1|sh|jar|apk|dll|lnk)$/i;
 var NESTED = ['round', 'backup', 'aft', 'aftStatus'];
 function toIso_(v) { return v instanceof Date ? v.toISOString() : String(v || ''); }
 
-var ROLE_ = '';
-function roleOf_(key) {
-  var P = PropertiesService.getScriptProperties();
-  if (key && key === P.getProperty('TEAM_KEY')) return 'editor';
-  if (key && P.getProperty('VIEW_KEY') && key === P.getProperty('VIEW_KEY')) return 'viewer';
-  return '';
-}
+var ROLE_ = 'editor';   // ไม่มีระบบรหัสทีมแล้ว: ทุกคนที่เข้าผ่านแอปมีสิทธิ์แก้ไข
 function doGet() { return out_({ ok: false, error: 'use_post' }); }
 
 function doPost(e) {
@@ -38,12 +32,9 @@ function doPost(e) {
   try { b = JSON.parse(e.postData.contents); } catch (err) { return out_({ ok: false, error: 'bad_request' }); }
   var P = PropertiesService.getScriptProperties();
   if (!P.getProperty('GAS_SECRET') || b.secret !== P.getProperty('GAS_SECRET')) return out_({ ok: false, error: 'unauthorized' });
-  ROLE_ = roleOf_(b.key);
-  if (!ROLE_) return out_({ ok: false, error: 'unauthorized' });
   var lock = LockService.getScriptLock();
   var isRead = (b.action === 'ver' || b.action === 'snapshot' || b.action === 'memoGet');
   var extra = null;
-  if (!isRead && ROLE_ !== 'editor') return out_({ ok: false, error: 'forbidden' });
   if (!isRead && !lock.tryLock(20000)) return out_({ ok: false, error: 'busy' });
   try {
     var who = String(b.by || '').slice(0, 80);
@@ -276,6 +267,7 @@ function patchDates_(patch, who) {
 }
 function setHait_(kind, key, val, who) {
   if (kind !== 'cat' && kind !== 'plus') throw new Error('bad');
+  if (JSON.stringify(val).length > 20000) throw new Error('too_large');   // กันค่าใหญ่ผิดปกติ (งานรายวัน/หมายเหตุ)
   var s = sh_('Hait'), k = kind + '|' + key, data = rows_('Hait'), row = 0;
   data.forEach(function (r, i) { if (r[0] === k) row = i + 2; });
   if (row) s.getRange(row, 2).setValue(JSON.stringify(val)); else s.appendRow([k, JSON.stringify(val)]);

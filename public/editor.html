@@ -123,14 +123,14 @@ const tm = s => { s = String(s || '').trim().replace(/\s*น\.?$/, ''); return s
 /* ---------- เก็บข้อมูล: ใช้ที่เก็บเดียวกับหน้าหลัก (ชีตของทีม หรือ localStorage) ---------- */
 const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } };
-const cfg = lsGet('ha.remote', null);
-const team = !!(cfg && cfg.key);
+const cfg = { name: lsGet('ha.name', '') };   // ไม่มีรหัสทีมแล้ว ใช้ชื่อผู้บันทึกอย่างเดียว
+const team = true;
 async function call(body) {
   let r;
-  try { r = await fetch('/api/gas', { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({ key: cfg.key, by: cfg.name || '' }, body)) }); }
+  try { r = await fetch('/api/gas', { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({ by: cfg.name || '' }, body)) }); }
   catch (e) { throw 'ออฟไลน์หรือเชื่อมต่อไม่ได้'; }
   let j; try { j = await r.json(); } catch (e) { throw 'ระบบตอบกลับไม่ถูกต้อง'; }
-  if (!j.ok) throw j.error === 'unauthorized' ? 'รหัสผ่านทีมไม่ถูกต้อง' : j.error === 'forbidden' ? 'บัญชีนี้ดูได้อย่างเดียว' : (j.error || 'ผิดพลาด');
+  if (!j.ok) throw j.error === 'unauthorized' ? 'ระบบหลังบ้านปฏิเสธคำขอ (ตรวจ GAS_SECRET)' : j.error === 'forbidden' ? 'บัญชีนี้ดูได้อย่างเดียว' : (j.error || 'ผิดพลาด');
   return j;
 }
 async function loadPlus() {
